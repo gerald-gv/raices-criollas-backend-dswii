@@ -1,0 +1,19 @@
+{
+  "properties": [
+    {
+      "name": "app.jwt.issuer",
+      "type": "java.lang.String",
+      "description": "Emisor del token JWT"
+    },
+    {
+      "name": "app.jwt.access-token-minutes",
+      "type": "java.lang.Integer",
+      "description": "Tiempo de expiración del token en minutos"
+    },
+    {
+      "name": "app.jwt.secret",
+      "type": "java.lang.String",
+      "description": "Clave secreta en Base64 para firmar y validar tokens JWT"
+    }
+  ]
+}
