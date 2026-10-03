@@ -1,0 +1,33 @@
+# Compilación (Maven)
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+# Eclipse / STS
+.settings/
+.classpath
+.project
+.apt_generated/
+.factorypath
+bin/
+
+# Eclipse workspace
+.metadata/
+
+# IntelliJ
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# Secretos y variables de entorno
+.env
+*.pem
+*.key
+
+# Logs
+*.log
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
