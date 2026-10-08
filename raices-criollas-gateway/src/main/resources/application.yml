@@ -1,0 +1,42 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: raices-criollas-gateway
+
+  cloud:
+    gateway:
+      server:
+        webflux:
+
+          routes:
+            - id: auth
+              uri: lb://raices-criollas-auth
+              predicates:
+                - Path=/api/auth/**
+
+            # Plantilla para los demás microservicios
+            # - id: menu
+            #   uri: lb://menu-services
+            #   predicates:
+            #     - Path=/api/menu/**
+            #   filters:
+            #     - StripPrefix=2
+
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowedOrigins: "http://localhost:3000"
+                allowedMethods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
+                allowedHeaders: "*"
+
+eureka:
+  instance:
+    hostname: "${EUREKA_HOSTNAME:localhost}"
+
+  client:
+    fetch-registry: true
+    register-with-eureka: true
+    service-url:
+      defaultZone: "${EUREKA_URL:http://localhost:8761/eureka}"
