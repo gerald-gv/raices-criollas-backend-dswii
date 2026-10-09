@@ -25,22 +25,28 @@ public interface PlatoRepository extends JpaRepository<Plato, Long> {
      * Siempre filtra plato disponible y categoria activa.
      */
     @Query("""
-            SELECT p FROM Plato p
+            SELECT p
+            FROM Plato p
             JOIN p.categoria c
             WHERE p.disponible = true
               AND c.activo = true
-              AND (:nombre      IS NULL OR LOWER(p.nombre) LIKE LOWER(CONCAT('%', :nombre, '%')))
+              AND (
+                  COALESCE(:nombre, '') = ''
+                  OR LOWER(p.nombre) LIKE LOWER(
+                      CONCAT('%', CAST(:nombre AS string), '%')
+                  )
+              )
               AND (:categoriaId IS NULL OR c.id = :categoriaId)
-              AND (:precioMin   IS NULL OR p.precio >= :precioMin)
-              AND (:precioMax   IS NULL OR p.precio <= :precioMax)
+              AND (:precioMin IS NULL OR p.precio >= :precioMin)
+              AND (:precioMax IS NULL OR p.precio <= :precioMax)
             ORDER BY p.nombre ASC
             """)
-    List<Plato> buscarDisponibles(
-            @Param("nombre")      String nombre,
-            @Param("categoriaId") Long categoriaId,
-            @Param("precioMin")   BigDecimal precioMin,
-            @Param("precioMax")   BigDecimal precioMax
-    );
+        List<Plato> buscarDisponibles(
+                @Param("nombre") String nombre,
+                @Param("categoriaId") Long categoriaId,
+                @Param("precioMin") BigDecimal precioMin,
+                @Param("precioMax") BigDecimal precioMax
+        );
 
     Optional<Plato> findByIdAndDisponibleTrue(Long id);
 }
