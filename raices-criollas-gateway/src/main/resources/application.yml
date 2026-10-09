@@ -16,6 +16,12 @@ spring:
               predicates:
                 - Path=/api/auth/**
 
+            - id: menu
+              uri: lb://raices-criollas-menu
+              predicates:
+               - Path=/api/menu/**
+              filters:
+               - StripPrefix=2
             # Plantilla para los demás microservicios
             # - id: menu
             #   uri: lb://menu-services
