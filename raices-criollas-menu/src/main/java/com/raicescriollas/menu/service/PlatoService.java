@@ -3,6 +3,8 @@ package com.raicescriollas.menu.service;
 import java.math.BigDecimal;
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Service;
 
@@ -22,7 +24,10 @@ public class PlatoService extends ICRUDimpl<Plato, Long> {
     public JpaRepository<Plato, Long> repo() {
         return repo;
     }
-
+    //Metodo de paginacion para el admin
+    public Page<Plato> listarTodos(Pageable pageable) {
+        return repo.findAll(pageable);
+    }
     // --- consultas cliente ---
 
     /**

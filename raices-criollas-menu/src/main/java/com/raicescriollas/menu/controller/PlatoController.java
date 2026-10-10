@@ -4,6 +4,10 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -80,19 +84,19 @@ public class PlatoController {
                 new ApiResponse<>(true, "Plato encontrado", mapper.map(plato, PlatoDTO.class)));
     }
 
-    // =========================================================
     // Endpoints administrativos
-    // =========================================================
 
     @GetMapping
-    public ResponseEntity<ApiResponse<?>> listarTodos() throws Exception {
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<ApiResponse<?>> listarTodos(
+            @PageableDefault(size = 10, sort = "id",
+                    direction = Sort.Direction.ASC) Pageable pageable) {
 
-        List<PlatoDTO> listaDTO = service.listarTodos()
-                .stream()
-                .map(p -> mapper.map(p, PlatoDTO.class))
-                .toList();
+        Page<PlatoDTO> paginaDTO = service.listarTodos(pageable)
+                .map(p -> mapper.map(p, PlatoDTO.class));
 
-        return ResponseEntity.ok(new ApiResponse<>(true, "Platos encontrados", listaDTO));
+        return ResponseEntity.ok(
+                new ApiResponse<>(true, "Platos encontrados", paginaDTO));
     }
 
     @GetMapping("/admin/{id}")
