@@ -1,0 +1,21 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:reservas_test_db;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+
+app:
+  jwt:
+    issuer: auth-service
+    secret: "dGhpc2lzYXZlcnlzZWNyZXRrZXlmb3J0ZXN0aW5ncHVycG9zZXMxMjM0NTY3ODk="
+
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
