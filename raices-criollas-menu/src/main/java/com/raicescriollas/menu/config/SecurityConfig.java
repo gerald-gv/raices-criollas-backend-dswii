@@ -39,6 +39,7 @@ public class SecurityConfig {
             	        "/categorias/activas",
             	        "/categorias/*",
             	        "/platos/disponibles",
+            	        "/platos/destacados",
             	        "/platos/*"
             	    ).permitAll()
 

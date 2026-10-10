@@ -46,4 +46,17 @@ public interface PlatoRepository extends JpaRepository<Plato, Long> {
     );
     Optional<Plato> findByIdAndDisponibleTrue(Long id);
     Page<Plato> findAll(Pageable pageable);
+
+    /** Platos marcados como destacados, disponibles y con categoria activa (para la home). */
+    @Query("""
+            SELECT p FROM Plato p
+            JOIN p.categoria c
+            WHERE p.destacado = true
+              AND p.disponible = true
+              AND c.activo = true
+            ORDER BY p.id ASC
+            """)
+    List<Plato> findDestacados();
+
+    long countByDestacadoTrue();
 }
