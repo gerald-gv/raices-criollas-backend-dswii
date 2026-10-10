@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.raicescriollas.menu.dto.PlatoDTO;
 import com.raicescriollas.menu.entity.Plato;
 import com.raicescriollas.menu.service.PlatoService;
+import com.raicescriollas.menu.service.ResumenService;
 import com.raicescriollas.menu.utils.ApiResponse;
 import com.raicescriollas.menu.utils.ModeloNotFoundException;
 
@@ -34,11 +35,13 @@ import jakarta.validation.Valid;
 public class PlatoController {
 
     private final PlatoService service;
+    private final ResumenService resumenService;
     private final ModelMapper mapper;
 
-    public PlatoController(PlatoService service, ModelMapper mapper) {
+    public PlatoController(PlatoService service, ModelMapper mapper, ResumenService resumenService) {
         this.service = service;
         this.mapper = mapper;
+        this.resumenService = resumenService;
     }
 
     // =========================================================
@@ -97,6 +100,13 @@ public class PlatoController {
 
         return ResponseEntity.ok(
                 new ApiResponse<>(true, "Platos encontrados", paginaDTO));
+    }
+    
+    @GetMapping("/admin/resumen")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<ApiResponse<?>> resumen() {
+        return ResponseEntity.ok(
+                new ApiResponse<>(true, "Resumen del menu", resumenService.obtenerResumen()));
     }
 
     @GetMapping("/admin/{id}")
