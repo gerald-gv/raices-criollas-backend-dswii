@@ -1,5 +1,7 @@
 package com.raicescriollas.menu.repository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -24,29 +26,24 @@ public interface PlatoRepository extends JpaRepository<Plato, Long> {
      * si se pasa null se ignora ese filtro.
      * Siempre filtra plato disponible y categoria activa.
      */
-    @Query("""
-            SELECT p
-            FROM Plato p
+       @Query("""
+            SELECT p FROM Plato p
             JOIN p.categoria c
             WHERE p.disponible = true
               AND c.activo = true
-              AND (
-                  COALESCE(:nombre, '') = ''
-                  OR LOWER(p.nombre) LIKE LOWER(
-                      CONCAT('%', CAST(:nombre AS string), '%')
-                  )
-              )
+              AND (:nombre IS NULL OR :nombre = ''
+                   OR LOWER(p.nombre) LIKE LOWER(CONCAT('%', :nombre, '%')))
               AND (:categoriaId IS NULL OR c.id = :categoriaId)
               AND (:precioMin IS NULL OR p.precio >= :precioMin)
               AND (:precioMax IS NULL OR p.precio <= :precioMax)
             ORDER BY p.nombre ASC
             """)
-        List<Plato> buscarDisponibles(
-                @Param("nombre") String nombre,
-                @Param("categoriaId") Long categoriaId,
-                @Param("precioMin") BigDecimal precioMin,
-                @Param("precioMax") BigDecimal precioMax
-        );
-
+    List<Plato> buscarDisponibles(
+            @Param("nombre") String nombre,
+            @Param("categoriaId") Long categoriaId,
+            @Param("precioMin") BigDecimal precioMin,
+            @Param("precioMax") BigDecimal precioMax
+    );
     Optional<Plato> findByIdAndDisponibleTrue(Long id);
+    Page<Plato> findAll(Pageable pageable);
 }
