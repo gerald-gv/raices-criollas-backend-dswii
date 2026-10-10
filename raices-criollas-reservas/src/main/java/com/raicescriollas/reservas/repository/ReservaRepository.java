@@ -32,16 +32,25 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
             @Param("reservaId") Long reservaId
     );
 
-    @Query("SELECT r FROM Reserva r WHERE " +
-           "(:mesaId IS NULL OR r.mesa.id = :mesaId) AND " +
-           "(:estado IS NULL OR r.estado = :estado) AND " +
-           "(:desde IS NULL OR r.fechaInicio >= :desde) AND " +
-           "(:hasta IS NULL OR r.fechaInicio <= :hasta) " +
-           "ORDER BY r.fechaInicio DESC")
-    List<Reserva> findWithFilters(
-            @Param("mesaId") Long mesaId,
-            @Param("estado") EstadoReserva estado,
-            @Param("desde") LocalDateTime desde,
-            @Param("hasta") LocalDateTime hasta
-    );
+    @Query("""
+    	    SELECT r FROM Reserva r
+    	    WHERE
+    	        (:mesaId IS NULL OR r.mesa.id = :mesaId)
+    	        AND (:estado IS NULL OR r.estado = :estado)
+    	        AND (
+    	            CAST(:desde AS timestamp) IS NULL
+    	            OR r.fechaInicio >= :desde
+    	        )
+    	        AND (
+    	            CAST(:hasta AS timestamp) IS NULL
+    	            OR r.fechaInicio <= :hasta
+    	        )
+    	    ORDER BY r.fechaInicio DESC
+    	    """)
+    	List<Reserva> findWithFilters(
+    	        @Param("mesaId") Long mesaId,
+    	        @Param("estado") EstadoReserva estado,
+    	        @Param("desde") LocalDateTime desde,
+    	        @Param("hasta") LocalDateTime hasta
+    	);
 }
