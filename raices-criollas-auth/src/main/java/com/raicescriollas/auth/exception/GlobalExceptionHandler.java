@@ -36,4 +36,11 @@ public class GlobalExceptionHandler {
  
         return new ResponseEntity<>( new ApiResponse<>(false, "Errores de validacion", errores),HttpStatus.BAD_REQUEST);
     }
+    
+    @ExceptionHandler(CampoInvalidoException.class)
+    public ResponseEntity<ApiResponse<?>> handleCampoInvalido(CampoInvalidoException ex) {
+        return new ResponseEntity<>(
+                new ApiResponse<>(false, "Errores de validacion", Map.of(ex.getCampo(), ex.getMessage())),
+                HttpStatus.BAD_REQUEST);
+    }
 }
