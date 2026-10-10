@@ -26,7 +26,7 @@ public interface PlatoRepository extends JpaRepository<Plato, Long> {
      * si se pasa null se ignora ese filtro.
      * Siempre filtra plato disponible y categoria activa.
      */
-    @Query("""
+       @Query("""
             SELECT p FROM Plato p
             JOIN p.categoria c
             WHERE p.disponible = true
