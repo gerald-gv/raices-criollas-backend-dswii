@@ -133,15 +133,36 @@ public class PlatoController {
     public ResponseEntity<ApiResponse<?>> registrar(
             @Valid @RequestBody PlatoDTO dto) throws Exception {
 
+        // Convertir el DTO en entidad
         Plato plato = mapper.map(dto, Plato.class);
+
+        // La base de datos debe generar el ID
         plato.setId(null);
+
+        // Valores iniciales del nuevo plato
         plato.setDisponible(true);
 
-        PlatoDTO bean = mapper.map(service.registrar(plato), PlatoDTO.class);
+        // Recuperar la categoría real desde la base de datos
+        Categoria categoria = categoriaRepository.findById(dto.getCategoriaId())
+                .orElseThrow(() ->
+                        new ModeloNotFoundException("Categoría no encontrada"));
+
+        // Asignar la relación obligatoria
+        plato.setCategoria(categoria);
+
+        // Guardar el plato
+        Plato guardado = service.registrar(plato);
+
+        PlatoDTO bean = mapper.map(guardado, PlatoDTO.class);
 
         return new ResponseEntity<>(
-                new ApiResponse<>(true, "Plato registrado correctamente", bean),
-                HttpStatus.CREATED);
+                new ApiResponse<>(
+                        true,
+                        "Plato registrado correctamente",
+                        bean
+                ),
+                HttpStatus.CREATED
+        );
     }
 
     @PutMapping("/{id}")
