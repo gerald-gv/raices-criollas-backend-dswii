@@ -22,7 +22,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.raicescriollas.menu.dto.PlatoDTO;
+import com.raicescriollas.menu.entity.Categoria;
 import com.raicescriollas.menu.entity.Plato;
+import com.raicescriollas.menu.repository.CategoriaRepository;
 import com.raicescriollas.menu.service.PlatoService;
 import com.raicescriollas.menu.service.ResumenService;
 import com.raicescriollas.menu.utils.ApiResponse;
@@ -37,11 +39,14 @@ public class PlatoController {
     private final PlatoService service;
     private final ResumenService resumenService;
     private final ModelMapper mapper;
+    private final CategoriaRepository categoriaRepository;
 
-    public PlatoController(PlatoService service, ModelMapper mapper, ResumenService resumenService) {
+
+    public PlatoController(PlatoService service, ModelMapper mapper, ResumenService resumenService, CategoriaRepository categoriaRepository) {
         this.service = service;
         this.mapper = mapper;
         this.resumenService = resumenService;
+        this.categoriaRepository = categoriaRepository;
     }
 
     // =========================================================
@@ -147,11 +152,17 @@ public class PlatoController {
 
         Plato plato = mapper.map(dto, Plato.class);
         plato.setId(id);
+        
+        Categoria categoria = categoriaRepository.findById(dto.getCategoriaId())
+                .orElseThrow(() -> new ModeloNotFoundException("Categoría no encontrada"));
+        
+        plato.setCategoria(categoria);
+        
+        Plato actualizado = service.actualizar(plato);
+        
+        PlatoDTO bean = mapper.map(actualizado, PlatoDTO.class);
 
-        PlatoDTO bean = mapper.map(service.actualizar(plato), PlatoDTO.class);
-
-        return ResponseEntity.ok(
-                new ApiResponse<>(true, "Plato actualizado correctamente", bean));
+        return ResponseEntity.ok(new ApiResponse<>(true, "Plato actualizado correctamente", bean));
     }
 
     @DeleteMapping("/{id}")
