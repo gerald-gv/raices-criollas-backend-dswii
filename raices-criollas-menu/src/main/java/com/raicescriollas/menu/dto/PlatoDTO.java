@@ -27,6 +27,8 @@ public class PlatoDTO {
 
     private Boolean disponible;
 
+    private Boolean destacado;
+
     @Size(max = 500, message = "{plato.imagen.max}")
     private String imagen;
 

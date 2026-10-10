@@ -71,6 +71,17 @@ public class PlatoController {
                 new ApiResponse<>(true, "Platos disponibles encontrados", listaDTO));
     }
 
+    @GetMapping("/destacados")
+    public ResponseEntity<ApiResponse<?>> listarDestacados() {
+        List<PlatoDTO> listaDTO = service.listarDestacados()
+                .stream()
+                .map(p -> mapper.map(p, PlatoDTO.class))
+                .toList();
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(true, "Platos destacados", listaDTO));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<?>> buscarDisponible(@PathVariable Long id) {
 
@@ -170,6 +181,22 @@ public class PlatoController {
         service.desactivar(id);
         return ResponseEntity.ok(
                 new ApiResponse<>(true, "Plato desactivado correctamente", null));
+    }
+
+    @PutMapping("/{id}/destacar")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<ApiResponse<?>> destacar(@PathVariable Long id) throws Exception {
+        service.destacar(id);
+        return ResponseEntity.ok(
+                new ApiResponse<>(true, "Plato marcado como destacado", null));
+    }
+
+    @PutMapping("/{id}/quitar-destacado")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<ApiResponse<?>> quitarDestacado(@PathVariable Long id) throws Exception {
+        service.quitarDestacado(id);
+        return ResponseEntity.ok(
+                new ApiResponse<>(true, "Plato quitado de destacados", null));
     }
 
     /**
