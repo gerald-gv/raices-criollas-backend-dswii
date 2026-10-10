@@ -50,7 +50,6 @@ public class SecurityConfig {
             	        "/platos",
             	        "/platos/admin/**"
             	    ).hasAuthority("ROLE_ADMIN")
-
             	    // Todo lo demas requiere admin
             	    .anyRequest()
             	        .hasAuthority("ROLE_ADMIN")
