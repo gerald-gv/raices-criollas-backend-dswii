@@ -9,7 +9,6 @@ import com.raicescriollas.menu.entity.Categoria;
 import com.raicescriollas.menu.repository.CategoriaRepository;
 import com.raicescriollas.menu.repository.PlatoRepository;
 import com.raicescriollas.menu.utils.BusinessException;
-import com.raicescriollas.menu.utils.ModeloNotFoundException;
 
 @Service
 public class CategoriaService extends ICRUDimpl<Categoria, Long> {
@@ -31,32 +30,18 @@ public class CategoriaService extends ICRUDimpl<Categoria, Long> {
     }
     public void activar(Long id) throws Exception {
         Categoria categoria = buscar(id);
-
-        if (categoria == null) {
-            throw new ModeloNotFoundException("Categoria no encontrada");
-        }
-
         categoria.setActivo(true);
         actualizar(categoria);
     }
 
     public void desactivar(Long id) throws Exception {
         Categoria categoria = buscar(id);
-
-        if (categoria == null) {
-            throw new ModeloNotFoundException("Categoria no encontrada");
-        }
-
         categoria.setActivo(false);
         actualizar(categoria);
     }
+
     public void eliminar(Long id) throws Exception {
-
-        Categoria categoria = buscar(id);
-
-        if (categoria == null) {
-            throw new ModeloNotFoundException("Categoria no encontrada");
-        }
+        buscar(id); // lanza ModeloNotFoundException si no existe
 
         if (platorepo.existsByCategoria_Id(id)) {
             throw new BusinessException(
