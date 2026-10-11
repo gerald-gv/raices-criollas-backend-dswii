@@ -4,19 +4,32 @@ import com.raicescriollas.pedidos.client.PlatoClient;
 
 import com.raicescriollas.pedidos.dto.*;
 import com.raicescriollas.pedidos.entity.*;
+import com.raicescriollas.pedidos.enums.EstadoPedido;
 import com.raicescriollas.pedidos.repository.*;
+
+import feign.FeignException;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Optional;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 
 @Service
 public class PedidosService {
-	
+
+	private static final int MAX_CANTIDAD = 99;
+	private static final int MAX_PAGE_SIZE = 50;
+
 	private final CarritoRepository carritos;
 	private final PedidoRepository pedidos;
 	private final PlatoClient menu;
@@ -27,11 +40,13 @@ public class PedidosService {
 		this.menu = menu;
 	}
 
+	// ---------- Carrito ----------
+
 	@Transactional(readOnly = true)
 	public CarritoResponse verCarrito(Long clienteId) {
 		validarCliente(clienteId);
 		return carritos.findByClienteId(clienteId).map(this::mapCarrito)
-				.orElse(new CarritoResponse(clienteId, List.of()));
+				.orElse(new CarritoResponse(clienteId, List.of(), BigDecimal.ZERO));
 	}
 
 	@Transactional
@@ -57,8 +72,24 @@ public class PedidosService {
 			item.setPlatoId(request.platoId());
 			item.setCantidad(request.cantidad());
 			carrito.getItems().add(item);
-		} else
-			item.setCantidad(Math.addExact(item.getCantidad(), request.cantidad()));
+		} else {
+			int suma = Math.addExact(item.getCantidad(), request.cantidad());
+			if (suma > MAX_CANTIDAD)
+				throw new IllegalArgumentException("Maximo " + MAX_CANTIDAD + " unidades por plato");
+			item.setCantidad(suma);
+		}
+		return mapCarrito(carritos.save(carrito));
+	}
+
+	// Fija la cantidad exacta (el "+ / -" del carrito); agregar() solo suma
+	@Transactional
+	public CarritoResponse actualizarCantidad(Long clienteId, Long platoId, int cantidad) {
+		validarCliente(clienteId);
+		Carrito carrito = carritos.findByClienteId(clienteId)
+				.orElseThrow(() -> new NoSuchElementException("Carrito no encontrado"));
+		ItemCarrito item = carrito.getItems().stream().filter(i -> i.getPlatoId().equals(platoId)).findFirst()
+				.orElseThrow(() -> new NoSuchElementException("Plato no encontrado en el carrito"));
+		item.setCantidad(cantidad);
 		return mapCarrito(carritos.save(carrito));
 	}
 
@@ -74,6 +105,13 @@ public class PedidosService {
 	}
 
 	@Transactional
+	public CarritoResponse vaciar(Long clienteId) {
+		validarCliente(clienteId);
+		carritos.findByClienteId(clienteId).ifPresent(carritos::delete);
+		return new CarritoResponse(clienteId, List.of(), BigDecimal.ZERO);
+	}
+
+	@Transactional
 	public PedidoResponse confirmar(Long clienteId) {
 		validarCliente(clienteId);
 		Carrito carrito = carritos.findByClienteId(clienteId)
@@ -82,7 +120,7 @@ public class PedidosService {
 			throw new IllegalArgumentException("Carrito vacio");
 		Pedido pedido = new Pedido();
 		pedido.setClienteId(clienteId);
-		pedido.setEstado("REGISTRADO");
+		pedido.setEstado(EstadoPedido.REGISTRADO.name());
 		pedido.setFecha(LocalDateTime.now());
 		BigDecimal total = BigDecimal.ZERO;
 		for (ItemCarrito item : carrito.getItems()) {
@@ -103,9 +141,12 @@ public class PedidosService {
 		return mapPedido(guardado);
 	}
 
+	// ---------- Pedidos del cliente ----------
+
+	// Un pedido ajeno responde igual que uno inexistente (404): no se revela que existe
 	@Transactional(readOnly = true)
-	public PedidoResponse buscarPedido(Long id) {
-		return mapPedido(pedidos.findById(id).orElseThrow(() -> new NoSuchElementException("Pedido no encontrado")));
+	public PedidoResponse buscarPedido(Long id, Long clienteId, boolean admin) {
+		return mapPedido(buscarVisible(id, clienteId, admin));
 	}
 
 	@Transactional(readOnly = true)
@@ -117,12 +158,75 @@ public class PedidosService {
 		return resultado;
 	}
 
+	// El cliente solo puede cancelar mientras el pedido siga recien registrado
+	@Transactional
+	public PedidoResponse cancelarMiPedido(Long id, Long clienteId) {
+		Pedido pedido = buscarVisible(id, clienteId, false);
+		if (!EstadoPedido.REGISTRADO.name().equals(pedido.getEstado()))
+			throw new IllegalStateException("Solo se puede cancelar un pedido recien registrado");
+		pedido.setEstado(EstadoPedido.CANCELADO.name());
+		return mapPedido(pedidos.save(pedido));
+	}
+
+	// ---------- Panel administrativo ----------
+
+	@Transactional(readOnly = true)
+	public PaginaResponse<PedidoResponse> listarTodos(String estado, int page, int size) {
+		EstadoPedido filtro = null;
+		if (estado != null && !estado.isBlank()) {
+			try {
+				filtro = EstadoPedido.valueOf(estado.trim().toUpperCase());
+			} catch (IllegalArgumentException e) {
+				throw new IllegalArgumentException("Estado no valido: " + estado);
+			}
+		}
+		Pageable pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), MAX_PAGE_SIZE),
+				Sort.by(Sort.Direction.DESC, "fecha", "id"));
+		Page<Pedido> resultado = filtro == null ? pedidos.findAll(pageable)
+				: pedidos.findByEstado(filtro.name(), pageable);
+		List<PedidoResponse> contenido = new ArrayList<>();
+		for (Pedido p : resultado.getContent())
+			contenido.add(mapPedido(p));
+		return new PaginaResponse<>(contenido, resultado.getTotalElements(), resultado.getTotalPages(),
+				resultado.getNumber(), resultado.getSize());
+	}
+
+	@Transactional
+	public PedidoResponse cambiarEstado(Long id, EstadoPedido nuevo) {
+		Pedido pedido = pedidos.findById(id).orElseThrow(() -> new NoSuchElementException("Pedido no encontrado"));
+		EstadoPedido actual = EstadoPedido.valueOf(pedido.getEstado());
+		if (!actual.puedePasarA(nuevo))
+			throw new IllegalStateException("No se puede pasar de " + actual + " a " + nuevo);
+		pedido.setEstado(nuevo.name());
+		return mapPedido(pedidos.save(pedido));
+	}
+
+	// ---------- Utilidades ----------
+
+	private Pedido buscarVisible(Long id, Long clienteId, boolean admin) {
+		return pedidos.findById(id).filter(p -> admin || p.getClienteId().equals(clienteId))
+				.orElseThrow(() -> new NoSuchElementException("Pedido no encontrado"));
+	}
+
+	// Estricto: para agregar y confirmar, el plato debe existir y estar disponible
 	private PlatoClient.PlatoData consultarPlato(Long id) {
 		PlatoClient.MenuResponse r = menu.obtenerPlato(id);
-		if (r == null || !r.success() || r.data() == null || !Boolean.TRUE.equals(r.data().disponible())
-				|| r.data().precio() == null || r.data().precio().signum() <= 0)
+		if (r == null || !r.success() || r.data() == null)
 			throw new IllegalArgumentException("El plato no esta disponible");
-		return r.data();
+		PlatoClient.PlatoData plato = r.data();
+		if (!Boolean.TRUE.equals(plato.disponible()) || plato.precio() == null || plato.precio().signum() <= 0)
+			throw new IllegalArgumentException("El plato \"" + plato.nombre() + "\" no esta disponible");
+		return plato;
+	}
+
+	// Tolerante: para VER el carrito, un plato retirado o un fallo de Menu no debe romper todo el carrito
+	private Optional<PlatoClient.PlatoData> buscarPlato(Long id) {
+		try {
+			PlatoClient.MenuResponse r = menu.obtenerPlato(id);
+			return r != null && r.success() ? Optional.ofNullable(r.data()) : Optional.empty();
+		} catch (FeignException e) {
+			return Optional.empty();
+		}
 	}
 
 	private void validarCliente(Long id) {
@@ -132,9 +236,20 @@ public class PedidosService {
 
 	private CarritoResponse mapCarrito(Carrito c) {
 		List<ItemCarritoResponse> items = new ArrayList<>();
-		for (ItemCarrito i : c.getItems())
-			items.add(new ItemCarritoResponse(i.getPlatoId(), i.getCantidad()));
-		return new CarritoResponse(c.getClienteId(), items);
+		BigDecimal total = BigDecimal.ZERO;
+		for (ItemCarrito i : c.getItems()) {
+			Optional<PlatoClient.PlatoData> plato = buscarPlato(i.getPlatoId());
+			BigDecimal precio = plato.map(PlatoClient.PlatoData::precio).orElse(null);
+			boolean disponible = plato.isPresent() && Boolean.TRUE.equals(plato.get().disponible()) && precio != null
+					&& precio.signum() > 0;
+			BigDecimal subtotal = precio == null ? null : precio.multiply(BigDecimal.valueOf(i.getCantidad()));
+			if (disponible)
+				total = total.add(subtotal);
+			items.add(new ItemCarritoResponse(i.getPlatoId(), i.getCantidad(),
+					plato.map(PlatoClient.PlatoData::nombre).orElse(null),
+					plato.map(PlatoClient.PlatoData::imagen).orElse(null), precio, subtotal, disponible));
+		}
+		return new CarritoResponse(c.getClienteId(), items, total);
 	}
 
 	private PedidoResponse mapPedido(Pedido p) {

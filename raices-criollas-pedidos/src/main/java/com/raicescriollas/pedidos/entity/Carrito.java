@@ -15,6 +15,7 @@ public class Carrito {
 	@Column(nullable = false, unique = true)
 	private Long clienteId;
 	@OneToMany(mappedBy = "carrito", cascade = CascadeType.ALL, orphanRemoval = true)
+	@OrderBy("id")
 	private List<ItemCarrito> items = new ArrayList<>();
 
 	public Long getId() {

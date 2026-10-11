@@ -16,6 +16,6 @@ public interface PlatoClient {
 	record MenuResponse(boolean success, String mensaje, PlatoData data) {
 	}
 
-	record PlatoData(Long id, String nombre, BigDecimal precio, Boolean disponible) {
+	record PlatoData(Long id, String nombre, BigDecimal precio, Boolean disponible, String imagen) {
 	}
 }
