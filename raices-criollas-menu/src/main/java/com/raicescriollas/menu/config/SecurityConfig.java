@@ -51,6 +51,13 @@ public class SecurityConfig {
             	        "/platos",
             	        "/platos/admin/**"
             	    ).hasAuthority("ROLE_ADMIN")
+
+            	    // Operaciones de stock: admin o microservicio interno (ROLE_SERVICE)
+            	    .requestMatchers(
+            	        HttpMethod.PUT,
+            	        "/platos/*/reducir-stock"
+            	    ).hasAnyAuthority("ROLE_ADMIN", "ROLE_SERVICE")
+
             	    // Todo lo demas requiere admin
             	    .anyRequest()
             	        .hasAuthority("ROLE_ADMIN")

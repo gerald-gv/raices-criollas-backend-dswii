@@ -67,7 +67,11 @@ public class PlatoService extends ICRUDimpl<Plato, Long> {
         Plato plato = datos.plato();
         plato.setCategoria(categoria);
         plato.setId(null);
-        plato.setDisponible(true);
+
+        // El stock inicial determina la disponibilidad
+        int stockInicial = plato.getStock() != null ? plato.getStock() : 0;
+        plato.setStock(stockInicial);
+        plato.setDisponible(stockInicial > 0);
 
         if (Boolean.TRUE.equals(plato.getDestacado())) {
             long actuales = repo.countByDestacadoTrue();
@@ -86,6 +90,7 @@ public class PlatoService extends ICRUDimpl<Plato, Long> {
      * Actualiza un plato existente validando que la categoria exista.
      * Si no se envía imagen, conserva la anterior.
      * Si se activa el destacado, se valida el límite de 5.
+     * Si se modifica el stock, recalcula la disponibilidad.
      */
     public Plato actualizar(Long id, PlatoConCategoria datos) throws Exception {
         Plato existente = buscar(id);
@@ -100,7 +105,17 @@ public class PlatoService extends ICRUDimpl<Plato, Long> {
             plato.setImagen(existente.getImagen());
         }
 
-        // Validar límite solo si se está activando el destacado 
+        // Si no se envía stock, conservar el existente
+        if (plato.getStock() == null) {
+            plato.setStock(existente.getStock());
+        }
+
+        // El stock controla la disponibilidad: si llega a 0, se desactiva
+        if (plato.getStock() == 0) {
+            plato.setDisponible(false);
+        }
+
+        // Validar límite solo si se está activando el destacado (no estaba antes)
         boolean yaDestacado = Boolean.TRUE.equals(existente.getDestacado());
         boolean quiereDestacar = Boolean.TRUE.equals(plato.getDestacado());
         if (quiereDestacar && !yaDestacado) {
@@ -116,6 +131,9 @@ public class PlatoService extends ICRUDimpl<Plato, Long> {
 
     public void activar(Long id) throws Exception {
         Plato plato = buscar(id);
+        if (plato.getStock() == 0) {
+            throw new BusinessException("No se puede activar un plato con stock 0. Repón el stock primero.");
+        }
         plato.setDisponible(true);
         repo.save(plato);
     }
@@ -124,6 +142,51 @@ public class PlatoService extends ICRUDimpl<Plato, Long> {
         Plato plato = buscar(id);
         plato.setDisponible(false);
         repo.save(plato);
+    }
+
+    // --- stock ---
+
+    /**
+     * Reduce el stock en la cantidad indicada.
+     * Si el stock resultante llega a 0 el plato se desactiva automáticamente.
+     */
+    public Plato reducirStock(Long id, int cantidad) throws Exception {
+        if (cantidad <= 0) {
+            throw new BusinessException("La cantidad a reducir debe ser mayor a 0.");
+        }
+
+        Plato plato = buscar(id);
+        int nuevoStock = plato.getStock() - cantidad;
+
+        if (nuevoStock < 0) {
+            throw new BusinessException(
+                    "Stock insuficiente. Stock actual: " + plato.getStock() + ", cantidad solicitada: " + cantidad + ".");
+        }
+
+        plato.setStock(nuevoStock);
+
+        if (nuevoStock == 0) {
+            plato.setDisponible(false);
+        }
+
+        return repo.save(plato);
+    }
+
+    /**
+     * Repone stock. Si el plato estaba desactivado por stock 0,
+     * se reactiva automáticamente.
+     */
+    public Plato reponerStock(Long id, int cantidad) throws Exception {
+        if (cantidad <= 0) {
+            throw new BusinessException("La cantidad a reponer debe ser mayor a 0.");
+        }
+
+        Plato plato = buscar(id);
+        int nuevoStock = plato.getStock() + cantidad;
+        plato.setStock(nuevoStock);
+        plato.setDisponible(true);
+
+        return repo.save(plato);
     }
 
     // --- destacados ---

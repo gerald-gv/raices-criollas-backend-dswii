@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.raicescriollas.menu.dto.PlatoDTO;
+import com.raicescriollas.menu.dto.PlatoPublicoDTO;
 import com.raicescriollas.menu.entity.Plato;
 import com.raicescriollas.menu.service.ImagenService;
 import com.raicescriollas.menu.service.PlatoService;
@@ -61,10 +62,10 @@ public class PlatoController {
             @RequestParam(required = false) BigDecimal precioMin,
             @RequestParam(required = false) BigDecimal precioMax) {
 
-        List<PlatoDTO> listaDTO = service
+        List<PlatoPublicoDTO> listaDTO = service
                 .buscarDisponibles(nombre, categoriaId, precioMin, precioMax)
                 .stream()
-                .map(p -> mapper.map(p, PlatoDTO.class))
+                .map(p -> mapper.map(p, PlatoPublicoDTO.class))
                 .toList();
 
         return ResponseEntity.ok(
@@ -73,9 +74,9 @@ public class PlatoController {
 
     @GetMapping("/destacados")
     public ResponseEntity<ApiResponse<?>> listarDestacados() {
-        List<PlatoDTO> listaDTO = service.listarDestacados()
+        List<PlatoPublicoDTO> listaDTO = service.listarDestacados()
                 .stream()
-                .map(p -> mapper.map(p, PlatoDTO.class))
+                .map(p -> mapper.map(p, PlatoPublicoDTO.class))
                 .toList();
 
         return ResponseEntity.ok(
@@ -92,7 +93,7 @@ public class PlatoController {
         }
 
         return ResponseEntity.ok(
-                new ApiResponse<>(true, "Plato encontrado", mapper.map(plato, PlatoDTO.class)));
+                new ApiResponse<>(true, "Plato encontrado", mapper.map(plato, PlatoPublicoDTO.class)));
     }
 
     // Endpoints administrativos
@@ -197,6 +198,39 @@ public class PlatoController {
         service.quitarDestacado(id);
         return ResponseEntity.ok(
                 new ApiResponse<>(true, "Plato quitado de destacados", null));
+    }
+
+    /**
+     * Reduce el stock de un plato. Si llega a 0 se desactiva automáticamente.
+     * Consumido por ROLE_ADMIN (panel) o ROLE_SERVICE (microservicio de pedidos).
+     * El microservicio de pedidos debe incluir ROLE_SERVICE en su JWT al llamar este endpoint.
+     */
+    @PutMapping("/{id}/reducir-stock")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_SERVICE')")
+    public ResponseEntity<ApiResponse<?>> reducirStock(
+            @PathVariable Long id,
+            @RequestParam int cantidad) throws Exception {
+
+        Plato actualizado = service.reducirStock(id, cantidad);
+        return ResponseEntity.ok(
+                new ApiResponse<>(true, "Stock reducido correctamente",
+                        mapper.map(actualizado, PlatoDTO.class)));
+    }
+
+    /**
+     * Repone stock de un plato. Si el plato estaba desactivado por stock 0,
+     * se reactiva automáticamente.
+     */
+    @PutMapping("/{id}/reponer-stock")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<ApiResponse<?>> reponerStock(
+            @PathVariable Long id,
+            @RequestParam int cantidad) throws Exception {
+
+        Plato actualizado = service.reponerStock(id, cantidad);
+        return ResponseEntity.ok(
+                new ApiResponse<>(true, "Stock repuesto correctamente",
+                        mapper.map(actualizado, PlatoDTO.class)));
     }
 
     /**

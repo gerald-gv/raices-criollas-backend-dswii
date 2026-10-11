@@ -3,6 +3,7 @@ package com.raicescriollas.menu.dto;
 import java.math.BigDecimal;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -28,6 +29,9 @@ public class PlatoDTO {
     private Boolean disponible;
 
     private Boolean destacado;
+
+    @Min(value = 0, message = "{plato.stock.min}")
+    private Integer stock;
 
     @Size(max = 500, message = "{plato.imagen.max}")
     private String imagen;
