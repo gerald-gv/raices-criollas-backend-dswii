@@ -21,6 +21,8 @@ app:
     issuer: auth-service
     access-token-minutes: 120
     secret: "${JWT_SECRET}"
+  internal:
+    secret: ${INTERNAL_SECRET:antiCibertec}
 
 eureka:
   instance:

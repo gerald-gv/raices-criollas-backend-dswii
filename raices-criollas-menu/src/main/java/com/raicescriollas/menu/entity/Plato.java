@@ -51,6 +51,9 @@ public class Plato {
     @Column(name = "destacado", nullable = false)
     private Boolean destacado = false;
 
+    @Column(name = "stock", nullable = false)
+    private Integer stock = 0;
+
     @Size(max = 500, message = "La URL de la imagen no debe superar los 500 caracteres")
     @Column(name = "imagen", length = 500)
     private String imagen;

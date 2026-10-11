@@ -29,7 +29,18 @@ public class JwtService implements ITokenService {
         this.issuer = issuer;
         this.accessMinutes = accessMinutes;
     }
-
+    public String generateServiceToken(String serviceName) {
+        Instant now = Instant.now();
+        JwtClaimsSet claims = JwtClaimsSet.builder()
+            .issuer(issuer)
+            .subject(serviceName)
+            .issuedAt(now)
+            .expiresAt(now.plus(accessMinutes, ChronoUnit.MINUTES))
+            .claim("roles", List.of("ROLE_SERVICE"))
+            .build();
+        JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
+        return encoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
+    }
     @Override
     public String generateAccessToken(Usuario usuario) {
         Instant now = Instant.now();
