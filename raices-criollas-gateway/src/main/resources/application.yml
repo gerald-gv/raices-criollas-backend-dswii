@@ -29,6 +29,12 @@ spring:
                - Path=/api/reservas/**
               filters:
                 - StripPrefix=2
+            - id: pedidos
+              uri: lb://raices-criollas-pedidos
+              predicates:
+              - Path=/api/pedidos/**
+              filters:
+                - StripPrefix=2
             # Plantilla para los demás microservicios
             # - id: menu
             #   uri: lb://menu-services
