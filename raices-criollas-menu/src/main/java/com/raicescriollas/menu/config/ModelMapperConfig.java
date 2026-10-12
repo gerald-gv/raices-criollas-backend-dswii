@@ -1,5 +1,6 @@
 package com.raicescriollas.menu.config;
 
+import com.raicescriollas.menu.dto.PlatoPublicoDTO;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.convention.MatchingStrategies;
 import org.springframework.context.annotation.Bean;
@@ -28,6 +29,11 @@ public class ModelMapperConfig {
             m.<Long>map(PlatoDTO::getCategoriaId,
                     (dest, v) -> dest.setCategoria(categoriaConId(v)));
         });
+        
+        // Plato -> PlatoPublicoDTO: extraer categoria.id como categoriaId
+        mapper.typeMap(Plato.class, PlatoPublicoDTO.class).addMappings(m ->
+                m.map(src -> src.getCategoria().getId(), PlatoPublicoDTO::setCategoriaId)
+        );
 
         return mapper;
     }

@@ -260,6 +260,26 @@ public class PedidosService {
 		return mapPedido(guardado);
 	}
 
+	// Lo llama el microservicio de pagos cuando Mercado Pago aprueba el cobro
+	@Transactional
+	public PedidoResponse marcarPagado(Long id) {
+		Pedido pedido = pedidos.findByIdParaActualizar(id)
+				.orElseThrow(() -> new NoSuchElementException("Pedido no encontrado"));
+		EstadoPedido actual = estadoDe(pedido);
+
+		if (actual == EstadoPedido.CANCELADO)
+			throw new IllegalStateException("El pedido fue cancelado");
+
+		// Aviso repetido (Mercado Pago reintenta): el pedido ya estaba pagado, no se descuenta dos veces
+		if (actual != EstadoPedido.PENDIENTE_PAGO)
+			return mapPedido(pedido);
+
+		// Si no alcanza el stock lanza IllegalStateException (409) y el pedido queda como estaba
+		stock.descontar(itemsDe(pedido));
+		pedido.setEstado(EstadoPedido.PAGADO.name());
+		return mapPedido(pedidos.save(pedido));
+	}
+
 	// Expiracion
 
 	// Pedidos que nadie pago, se cancelan

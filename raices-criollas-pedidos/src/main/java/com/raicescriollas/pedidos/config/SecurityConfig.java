@@ -26,6 +26,7 @@ public class SecurityConfig {
 						.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 						// Panel administrativo: solo ROLE_ADMIN
 						.requestMatchers("/pedidos/admin/**").hasAuthority("ROLE_ADMIN")
+						.requestMatchers("/pedidos/interno/**").hasAuthority("ROLE_SERVICE")
 						.anyRequest().authenticated())
 				.oauth2ResourceServer(o -> o.jwt(j -> j.jwtAuthenticationConverter(converter())));
 		return http.build();
