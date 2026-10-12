@@ -35,6 +35,13 @@ spring:
               - Path=/api/pedidos/**
               filters:
                 - StripPrefix=1
+
+            - id: payment
+              uri: lb://raices-criollas-payment
+              predicates:
+                - Path=/api/payment/**
+              filters:
+                - StripPrefix=2
             # Plantilla para los demás microservicios
             # - id: menu
             #   uri: lb://menu-services

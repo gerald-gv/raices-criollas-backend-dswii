@@ -97,5 +97,11 @@ public class PedidosController {
 		
 		return ResponseEntity.ok(new ApiResponse<>(true, "Estado actualizado", service.cambiarEstado(id, r.estado())));
 	}
+
+	// MP
+	@PutMapping("/interno/{id}/pagado")
+	public ResponseEntity<ApiResponse<PedidoResponse>> marcarPagado(@PathVariable Long id) {
+		return ResponseEntity.ok(new ApiResponse<>(true, "Pedido marcado como pagado", service.marcarPagado(id)));
+	}
 }
 
