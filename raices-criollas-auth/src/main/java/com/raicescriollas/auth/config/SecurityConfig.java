@@ -26,6 +26,8 @@ public class SecurityConfig {
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(a -> a
                 .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
+                // Token de servicio, lo piden los microservicios sin JWT; lo protege el secreto compartido
+                .requestMatchers("/internal/service-token").permitAll()
                 .anyRequest().authenticated())
             .oauth2ResourceServer(o -> o.jwt(j -> j.jwtAuthenticationConverter(converter())));
         return http.build();

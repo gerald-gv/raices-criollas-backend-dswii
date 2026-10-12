@@ -27,6 +27,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.raicescriollas.menu.dto.PlatoDTO;
 import com.raicescriollas.menu.dto.PlatoPublicoDTO;
+import com.raicescriollas.menu.dto.StockItemDTO;
 import com.raicescriollas.menu.entity.Plato;
 import com.raicescriollas.menu.service.ImagenService;
 import com.raicescriollas.menu.service.PlatoService;
@@ -231,6 +232,22 @@ public class PlatoController {
         return ResponseEntity.ok(
                 new ApiResponse<>(true, "Stock repuesto correctamente",
                         mapper.map(actualizado, PlatoDTO.class)));
+    }
+
+    /** Reduce el stock de varios platos a la vez. Solo microservicios internos (pedidos). */
+    @PutMapping("/stock/reducir")
+    @PreAuthorize("hasAuthority('ROLE_SERVICE')")
+    public ResponseEntity<ApiResponse<?>> reducirStockLote(@RequestBody List<StockItemDTO> items) {
+        service.reducirStock(items);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Stock reducido correctamente", null));
+    }
+
+    /** Devuelve el stock de varios platos a la vez. Solo microservicios internos. */
+    @PutMapping("/stock/reponer")
+    @PreAuthorize("hasAuthority('ROLE_SERVICE')")
+    public ResponseEntity<ApiResponse<?>> reponerStockLote(@RequestBody List<StockItemDTO> items) {
+        service.reponerStock(items);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Stock repuesto correctamente", null));
     }
 
     /**

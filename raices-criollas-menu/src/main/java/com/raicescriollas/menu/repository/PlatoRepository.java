@@ -3,10 +3,13 @@ package com.raicescriollas.menu.repository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.raicescriollas.menu.entity.Plato;
+
+import jakarta.persistence.LockModeType;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -59,4 +62,9 @@ public interface PlatoRepository extends JpaRepository<Plato, Long> {
     List<Plato> findDestacados();
 
     long countByDestacadoTrue();
+    
+    /** Lee el plato bloqueándolo hasta que termine la transaccion, dos compras a la vez no pisan el stock. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM Plato p WHERE p.id = :id")
+    Optional<Plato> findByIdForUpdate(@Param("id") Long id);
 }

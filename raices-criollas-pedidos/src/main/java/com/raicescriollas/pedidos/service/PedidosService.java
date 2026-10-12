@@ -12,7 +12,9 @@ import feign.FeignException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
@@ -33,14 +35,16 @@ public class PedidosService {
 	private final CarritoRepository carritos;
 	private final PedidoRepository pedidos;
 	private final PlatoClient menu;
+	private final StockService stock;
 
-	public PedidosService(CarritoRepository carritos, PedidoRepository pedidos, PlatoClient menu) {
+	public PedidosService(CarritoRepository carritos, PedidoRepository pedidos, PlatoClient menu, StockService stock) {
 		this.carritos = carritos;
 		this.pedidos = pedidos;
 		this.menu = menu;
+		this.stock = stock;
 	}
 
-	// ---------- Carrito ----------
+	// Carrito 
 
 	@Transactional(readOnly = true)
 	public CarritoResponse verCarrito(Long clienteId) {
@@ -78,10 +82,48 @@ public class PedidosService {
 				throw new IllegalArgumentException("Maximo " + MAX_CANTIDAD + " unidades por plato");
 			item.setCantidad(suma);
 		}
+		tocar(carrito);
 		return mapCarrito(carritos.save(carrito));
 	}
 
-	// Fija la cantidad exacta (el "+ / -" del carrito); agregar() solo suma
+	// Sincroniza el carrito con lo que el cliente dejo en pantalla
+	@Transactional
+	public CarritoResponse reemplazarCarrito(Long clienteId, List<AgregarItemRequest> nuevos) {
+		validarCliente(clienteId);
+
+		Map<Long, Integer> cantidades = new LinkedHashMap<>();
+		for (AgregarItemRequest i : nuevos) {
+			if (i.platoId() <= 0)
+				throw new IllegalArgumentException("platoId debe ser positivo");
+			if (cantidades.merge(i.platoId(), i.cantidad(), Integer::sum) > MAX_CANTIDAD)
+				throw new IllegalArgumentException("Maximo " + MAX_CANTIDAD + " unidades por plato");
+		}
+
+		if (cantidades.isEmpty())
+			return vaciar(clienteId);
+
+		Carrito carrito = carritos.findByClienteId(clienteId).orElseGet(() -> {
+			Carrito c = new Carrito();
+			c.setClienteId(clienteId);
+			return c;
+		});
+
+		carrito.getItems().removeIf(i -> !cantidades.containsKey(i.getPlatoId()));
+		for (ItemCarrito actual : carrito.getItems())
+			actual.setCantidad(cantidades.remove(actual.getPlatoId()));
+		cantidades.forEach((platoId, cantidad) -> {
+			ItemCarrito item = new ItemCarrito();
+			item.setCarrito(carrito);
+			item.setPlatoId(platoId);
+			item.setCantidad(cantidad);
+			carrito.getItems().add(item);
+		});
+
+		tocar(carrito);
+		return mapCarrito(carritos.save(carrito));
+	}
+
+	// Fija la cantidad exacta de un plato
 	@Transactional
 	public CarritoResponse actualizarCantidad(Long clienteId, Long platoId, int cantidad) {
 		validarCliente(clienteId);
@@ -90,6 +132,7 @@ public class PedidosService {
 		ItemCarrito item = carrito.getItems().stream().filter(i -> i.getPlatoId().equals(platoId)).findFirst()
 				.orElseThrow(() -> new NoSuchElementException("Plato no encontrado en el carrito"));
 		item.setCantidad(cantidad);
+		tocar(carrito);
 		return mapCarrito(carritos.save(carrito));
 	}
 
@@ -101,6 +144,7 @@ public class PedidosService {
 		boolean eliminado = carrito.getItems().removeIf(i -> i.getPlatoId().equals(platoId));
 		if (!eliminado)
 			throw new NoSuchElementException("Plato no encontrado en el carrito");
+		tocar(carrito);
 		return mapCarrito(carritos.save(carrito));
 	}
 
@@ -111,6 +155,9 @@ public class PedidosService {
 		return new CarritoResponse(clienteId, List.of(), BigDecimal.ZERO);
 	}
 
+	// ---------- Continuar compra ----------
+
+	// Crea el pedido PENDIENTE_PAGO con los precios de hoy. No toca el stock
 	@Transactional
 	public PedidoResponse confirmar(Long clienteId) {
 		validarCliente(clienteId);
@@ -118,9 +165,14 @@ public class PedidosService {
 				.orElseThrow(() -> new IllegalArgumentException("Carrito vacio"));
 		if (carrito.getItems().isEmpty())
 			throw new IllegalArgumentException("Carrito vacio");
+
+		// Un solo pedido pendiente por cliente: si vuelve a continuar, el anterior se reemplaza
+		for (Pedido previo : pedidos.findByClienteIdAndEstado(clienteId, EstadoPedido.PENDIENTE_PAGO.name()))
+			previo.setEstado(EstadoPedido.CANCELADO.name());
+
 		Pedido pedido = new Pedido();
 		pedido.setClienteId(clienteId);
-		pedido.setEstado(EstadoPedido.REGISTRADO.name());
+		pedido.setEstado(EstadoPedido.PENDIENTE_PAGO.name());
 		pedido.setFecha(LocalDateTime.now());
 		BigDecimal total = BigDecimal.ZERO;
 		for (ItemCarrito item : carrito.getItems()) {
@@ -136,14 +188,12 @@ public class PedidosService {
 			pedido.getDetalles().add(detalle);
 		}
 		pedido.setTotal(total);
-		Pedido guardado = pedidos.save(pedido);
-		carritos.delete(carrito);
-		return mapPedido(guardado);
+		return mapPedido(pedidos.save(pedido));
 	}
 
-	// ---------- Pedidos del cliente ----------
+	// Pedidos del cliente 
 
-	// Un pedido ajeno responde igual que uno inexistente (404): no se revela que existe
+	// Un pedido ajeno responde igual que uno inexistente (404)
 	@Transactional(readOnly = true)
 	public PedidoResponse buscarPedido(Long id, Long clienteId, boolean admin) {
 		return mapPedido(buscarVisible(id, clienteId, admin));
@@ -158,17 +208,16 @@ public class PedidosService {
 		return resultado;
 	}
 
-	// El cliente solo puede cancelar mientras el pedido siga recien registrado
 	@Transactional
 	public PedidoResponse cancelarMiPedido(Long id, Long clienteId) {
 		Pedido pedido = buscarVisible(id, clienteId, false);
-		if (!EstadoPedido.REGISTRADO.name().equals(pedido.getEstado()))
-			throw new IllegalStateException("Solo se puede cancelar un pedido recien registrado");
+		if (estadoDe(pedido) != EstadoPedido.PENDIENTE_PAGO)
+			throw new IllegalStateException("Solo se puede cancelar un pedido que aun no se ha pagado");
 		pedido.setEstado(EstadoPedido.CANCELADO.name());
 		return mapPedido(pedidos.save(pedido));
 	}
 
-	// ---------- Panel administrativo ----------
+	// Panel administrativo
 
 	@Transactional(readOnly = true)
 	public PaginaResponse<PedidoResponse> listarTodos(String estado, int page, int size) {
@@ -194,21 +243,65 @@ public class PedidosService {
 	@Transactional
 	public PedidoResponse cambiarEstado(Long id, EstadoPedido nuevo) {
 		Pedido pedido = pedidos.findById(id).orElseThrow(() -> new NoSuchElementException("Pedido no encontrado"));
-		EstadoPedido actual = EstadoPedido.valueOf(pedido.getEstado());
+		EstadoPedido actual = estadoDe(pedido);
+
+		// PAGADO lo pondra el microservicio de pagos (ahi se descuenta el stock)
+		if (nuevo == EstadoPedido.PAGADO)
+			throw new IllegalStateException("El pago lo confirma el sistema de pagos; no se puede marcar manualmente");
 		if (!actual.puedePasarA(nuevo))
 			throw new IllegalStateException("No se puede pasar de " + actual + " a " + nuevo);
+
 		pedido.setEstado(nuevo.name());
-		return mapPedido(pedidos.save(pedido));
+		Pedido guardado = pedidos.save(pedido);
+
+		// El stock se descuenta al pagar, solo se devuelve si el pedido ya estaba pagado
+		if (nuevo == EstadoPedido.CANCELADO && actual != EstadoPedido.PENDIENTE_PAGO)
+			stock.devolver(itemsDe(guardado));
+		return mapPedido(guardado);
 	}
 
-	// ---------- Utilidades ----------
+	// Expiracion
+
+	// Pedidos que nadie pago, se cancelan
+	@Transactional
+	public int expirarPedidosPendientes(LocalDateTime limite) {
+		List<Pedido> vencidos = pedidos.findByEstadoAndFechaBefore(EstadoPedido.PENDIENTE_PAGO.name(), limite);
+		for (Pedido p : vencidos)
+			p.setEstado(EstadoPedido.CANCELADO.name());
+		return vencidos.size();
+	}
+
+	// Carritos que el cliente abandono
+	@Transactional
+	public int expirarCarritos(LocalDateTime limite) {
+		List<Carrito> abandonados = carritos.findByActualizadoEnBefore(limite);
+		carritos.deleteAll(abandonados);
+		return abandonados.size();
+	}
+
+	// Utilidades 
 
 	private Pedido buscarVisible(Long id, Long clienteId, boolean admin) {
 		return pedidos.findById(id).filter(p -> admin || p.getClienteId().equals(clienteId))
 				.orElseThrow(() -> new NoSuchElementException("Pedido no encontrado"));
 	}
 
-	// Estricto: para agregar y confirmar, el plato debe existir y estar disponible
+	private EstadoPedido estadoDe(Pedido pedido) {
+		return EstadoPedido.valueOf(pedido.getEstado());
+	}
+
+	private void tocar(Carrito carrito) {
+		carrito.setActualizadoEn(LocalDateTime.now());
+	}
+
+	private List<PlatoClient.ItemStock> itemsDe(Pedido pedido) {
+		List<PlatoClient.ItemStock> items = new ArrayList<>();
+		for (DetallePedido d : pedido.getDetalles())
+			items.add(new PlatoClient.ItemStock(d.getPlatoId(), d.getCantidad()));
+		return items;
+	}
+
+	// para agregar y continuar la compra, el plato debe existir y estar disponible
 	private PlatoClient.PlatoData consultarPlato(Long id) {
 		PlatoClient.MenuResponse r = menu.obtenerPlato(id);
 		if (r == null || !r.success() || r.data() == null)
@@ -219,7 +312,7 @@ public class PedidosService {
 		return plato;
 	}
 
-	// Tolerante: para VER el carrito, un plato retirado o un fallo de Menu no debe romper todo el carrito
+	// para VER el carrito, un plato retirado o un fallo de Menu no debe romper todo el carrito
 	private Optional<PlatoClient.PlatoData> buscarPlato(Long id) {
 		try {
 			PlatoClient.MenuResponse r = menu.obtenerPlato(id);

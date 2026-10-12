@@ -2,12 +2,17 @@ package com.raicescriollas.menu.service;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import com.raicescriollas.menu.dto.StockItemDTO;
 import com.raicescriollas.menu.entity.Categoria;
 import com.raicescriollas.menu.entity.Plato;
 import com.raicescriollas.menu.repository.CategoriaRepository;
@@ -150,12 +155,13 @@ public class PlatoService extends ICRUDimpl<Plato, Long> {
      * Reduce el stock en la cantidad indicada.
      * Si el stock resultante llega a 0 el plato se desactiva automáticamente.
      */
+    @Transactional
     public Plato reducirStock(Long id, int cantidad) throws Exception {
         if (cantidad <= 0) {
             throw new BusinessException("La cantidad a reducir debe ser mayor a 0.");
         }
 
-        Plato plato = buscar(id);
+        Plato plato = buscarParaActualizar(id);
         int nuevoStock = plato.getStock() - cantidad;
 
         if (nuevoStock < 0) {
@@ -176,17 +182,75 @@ public class PlatoService extends ICRUDimpl<Plato, Long> {
      * Repone stock. Si el plato estaba desactivado por stock 0,
      * se reactiva automáticamente.
      */
+    @Transactional
     public Plato reponerStock(Long id, int cantidad) throws Exception {
         if (cantidad <= 0) {
             throw new BusinessException("La cantidad a reponer debe ser mayor a 0.");
         }
 
-        Plato plato = buscar(id);
+        Plato plato = buscarParaActualizar(id);
         int nuevoStock = plato.getStock() + cantidad;
         plato.setStock(nuevoStock);
         plato.setDisponible(true);
 
         return repo.save(plato);
+    }
+
+    /**
+     * Reduce el stock de varios platos en una sola transacción (lo usa pedidos).
+     * Todo o nada: si un plato no alcanza, ninguno se descuenta. El mensaje no revela cantidades.
+     */
+    @Transactional
+    public void reducirStock(List<StockItemDTO> items) {
+        // Se agrupa por plato y se recorre por id: dos pedidos a la vez bloquean en el mismo orden y no se traban
+        for (Map.Entry<Long, Integer> item : agrupar(items).entrySet()) {
+            Plato plato = buscarParaActualizar(item.getKey());
+
+            if (!Boolean.TRUE.equals(plato.getDisponible())) {
+                throw new BusinessException("«" + plato.getNombre() + "» ya no está disponible.");
+            }
+            if (plato.getStock() < item.getValue()) {
+                throw new BusinessException("Stock insuficiente de «" + plato.getNombre() + "».");
+            }
+
+            plato.setStock(plato.getStock() - item.getValue());
+            if (plato.getStock() == 0) {
+                plato.setDisponible(false);
+            }
+            repo.save(plato);
+        }
+    }
+
+    /**
+     * Devuelve stock de varios platos (pedido cancelado). Solo reactiva el plato si estaba agotado:
+     * si el administrador lo ocultó a propósito, sigue oculto.
+     */
+    @Transactional
+    public void reponerStock(List<StockItemDTO> items) {
+        for (Map.Entry<Long, Integer> item : agrupar(items).entrySet()) {
+            Plato plato = buscarParaActualizar(item.getKey());
+
+            if (plato.getStock() == 0) {
+                plato.setDisponible(true);
+            }
+            plato.setStock(plato.getStock() + item.getValue());
+            repo.save(plato);
+        }
+    }
+
+    private Map<Long, Integer> agrupar(List<StockItemDTO> items) {
+        if (items == null || items.isEmpty()
+                || items.stream().anyMatch(i -> i.platoId() == null || i.cantidad() == null || i.cantidad() < 1)) {
+            throw new BusinessException("La lista de platos no es válida.");
+        }
+
+        return items.stream().collect(Collectors.toMap(
+                StockItemDTO::platoId, StockItemDTO::cantidad, Integer::sum, TreeMap::new));
+    }
+
+    private Plato buscarParaActualizar(Long id) {
+        return repo.findByIdForUpdate(id)
+                .orElseThrow(() -> new ModeloNotFoundException("Plato no encontrado"));
     }
 
     // --- destacados ---

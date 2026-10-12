@@ -2,6 +2,7 @@ package com.raicescriollas.pedidos.entity;
 
 import jakarta.persistence.*;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,8 +15,9 @@ public class Carrito {
 	private Long id;
 	@Column(nullable = false, unique = true)
 	private Long clienteId;
+	@Column(name = "actualizado_en")
+	private LocalDateTime actualizadoEn;
 	@OneToMany(mappedBy = "carrito", cascade = CascadeType.ALL, orphanRemoval = true)
-	@OrderBy("id")
 	private List<ItemCarrito> items = new ArrayList<>();
 
 	public Long getId() {
@@ -33,4 +35,13 @@ public class Carrito {
 	public List<ItemCarrito> getItems() {
 		return items;
 	}
+
+	public LocalDateTime getActualizadoEn() {
+		return actualizadoEn;
+	}
+
+	public void setActualizadoEn(LocalDateTime actualizadoEn) {
+		this.actualizadoEn = actualizadoEn;
+	}
 }
+
