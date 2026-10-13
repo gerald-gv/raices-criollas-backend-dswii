@@ -9,7 +9,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.raicescriollas.reservas.dto.MesaRequestDTO;
 import com.raicescriollas.reservas.dto.MesaResponseDTO;
 import com.raicescriollas.reservas.entity.Mesa;
-import com.raicescriollas.reservas.enums.EstadoReserva;
 import com.raicescriollas.reservas.exception.BusinessException;
 import com.raicescriollas.reservas.exception.ResourceNotFoundException;
 import com.raicescriollas.reservas.repository.MesaRepository;
@@ -39,8 +38,8 @@ public class MesaServiceImpl implements IMesaService {
             throw new BusinessException("La cantidad de personas debe ser mayor que cero");
         }
 
-        List<EstadoReserva> estadosBloqueantes = List.of(EstadoReserva.PENDIENTE, EstadoReserva.CONFIRMADA);
-        return mesaRepository.findMesasDisponibles(cantidadPersonas, fechaInicio, fechaFin, estadosBloqueantes)
+        LocalDateTime ahora = LocalDateTime.now();
+        return mesaRepository.findMesasDisponibles(cantidadPersonas, fechaInicio, fechaFin, ahora)
                 .stream()
                 .map(this::toDTO)
                 .toList();
@@ -60,6 +59,7 @@ public class MesaServiceImpl implements IMesaService {
                 .numeroMesa(dto.getNumeroMesa().trim())
                 .capacidad(dto.getCapacidad())
                 .ubicacion(dto.getUbicacion())
+                .precioBase(dto.getPrecioBase())
                 .activo(dto.getActivo() != null ? dto.getActivo() : true)
                 .build();
 
@@ -99,6 +99,9 @@ public class MesaServiceImpl implements IMesaService {
         mesa.setNumeroMesa(dto.getNumeroMesa().trim());
         mesa.setCapacidad(dto.getCapacidad());
         mesa.setUbicacion(dto.getUbicacion());
+        if (dto.getPrecioBase() != null) {
+            mesa.setPrecioBase(dto.getPrecioBase());
+        }
         if (dto.getActivo() != null) {
             mesa.setActivo(dto.getActivo());
         }
@@ -125,6 +128,7 @@ public class MesaServiceImpl implements IMesaService {
                 .numeroMesa(mesa.getNumeroMesa())
                 .capacidad(mesa.getCapacidad())
                 .ubicacion(mesa.getUbicacion())
+                .precioBase(mesa.getPrecioBase())
                 .activo(mesa.getActivo())
                 .build();
     }

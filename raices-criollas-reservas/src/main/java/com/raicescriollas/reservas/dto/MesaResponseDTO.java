@@ -1,5 +1,7 @@
 package com.raicescriollas.reservas.dto;
 
+import java.math.BigDecimal;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,5 +17,6 @@ public class MesaResponseDTO {
     private String numeroMesa;
     private Integer capacidad;
     private String ubicacion;
+    private BigDecimal precioBase;
     private Boolean activo;
 }

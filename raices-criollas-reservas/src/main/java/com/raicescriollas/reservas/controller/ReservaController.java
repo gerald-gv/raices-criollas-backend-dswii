@@ -16,8 +16,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.raicescriollas.reservas.dto.ActualizarEstadoReservaDTO;
+import com.raicescriollas.reservas.dto.CotizacionRequestDTO;
+import com.raicescriollas.reservas.dto.CotizacionResponseDTO;
 import com.raicescriollas.reservas.dto.ReservaRequestDTO;
 import com.raicescriollas.reservas.dto.ReservaResponseDTO;
+import com.raicescriollas.reservas.enums.EstadoPago;
 import com.raicescriollas.reservas.enums.EstadoReserva;
 import com.raicescriollas.reservas.service.IReservaService;
 import com.raicescriollas.reservas.utils.ApiResponse;
@@ -32,6 +35,13 @@ import lombok.RequiredArgsConstructor;
 public class ReservaController {
 
     private final IReservaService reservaService;
+
+    // Cotizar reserva previa (cálculo de precio y verificación de disponibilidad antes de confirmar)
+    @PostMapping("/cotizar")
+    public ResponseEntity<ApiResponse<CotizacionResponseDTO>> cotizarReserva(@Valid @RequestBody CotizacionRequestDTO dto) {
+        CotizacionResponseDTO cotizacion = reservaService.cotizarReserva(dto);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Cotización generada exitosamente", cotizacion));
+    }
 
     // Crear una reserva para el cliente autenticado (el ID se extrae del JWT)
     @PostMapping
@@ -70,10 +80,11 @@ public class ReservaController {
     public ResponseEntity<ApiResponse<List<ReservaResponseDTO>>> listarTodas(
             @RequestParam(required = false) Long mesaId,
             @RequestParam(required = false) EstadoReserva estado,
+            @RequestParam(required = false) EstadoPago estadoPago,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime desde,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime hasta
     ) {
-        List<ReservaResponseDTO> reservas = reservaService.listarTodas(mesaId, estado, desde, hasta);
+        List<ReservaResponseDTO> reservas = reservaService.listarTodas(mesaId, estado, estadoPago, desde, hasta);
         return ResponseEntity.ok(new ApiResponse<>(true, "Listado de reservas obtenido exitosamente", reservas));
     }
 
@@ -92,7 +103,7 @@ public class ReservaController {
             @PathVariable Long id,
             @Valid @RequestBody ActualizarEstadoReservaDTO dto
     ) {
-        ReservaResponseDTO reserva = reservaService.cambiarEstado(id, dto.getEstado());
+        ReservaResponseDTO reserva = reservaService.cambiarEstado(id, dto.getEstado(), dto.getEstadoPago());
         return ResponseEntity.ok(new ApiResponse<>(true, "Estado de la reserva actualizado exitosamente", reserva));
     }
 }

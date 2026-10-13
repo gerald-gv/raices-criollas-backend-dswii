@@ -1,5 +1,8 @@
 package com.raicescriollas.reservas.dto;
 
+import java.math.BigDecimal;
+
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -22,6 +25,9 @@ public class MesaRequestDTO {
     private Integer capacidad;
 
     private String ubicacion;
+
+    @DecimalMin(value = "0.0", inclusive = true, message = "El precio base no puede ser negativo")
+    private BigDecimal precioBase;
 
     private Boolean activo;
 }

@@ -36,13 +36,17 @@ Dado que el API Gateway aplica el filtro `StripPrefix=2` sobre `/api/reservas/**
 
 | Método | URL Gateway (`:8080`) | Ruta Interna (`:8083`) | Acceso / Rol | Descripción |
 | :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/api/reservas/reservas` | `/reservas` | `ROLE_CLIENTE`, `ROLE_ADMIN` | Crea una reserva para el usuario autenticado (extrae `sub` del JWT). |
-| `GET` | `/api/reservas/reservas/mis-reservas` | `/reservas/mis-reservas` | `ROLE_CLIENTE`, `ROLE_ADMIN` | Lista las reservas del cliente autenticado. |
+| `POST` | `/api/reservas/reservas/cotizar` | `/reservas/cotizar` | **Público** (`permitAll`) | Cotiza el importe total proyectado y disponibilidad de la mesa en Soles (`PEN`). |
+| `POST` | `/api/reservas/reservas` | `/reservas` | `ROLE_CLIENTE`, `ROLE_ADMIN` | Crea una reserva (en estado `PENDIENTE` de pago por 15 min). |
+| `GET` | `/api/reservas/reservas/mis-reservas` | `/reservas/mis-reservas` | `ROLE_CLIENTE`, `ROLE_ADMIN` | Lista las reservas del cliente con sus importes y estados de pago. |
 | `GET` | `/api/reservas/reservas/mis-reservas/{id}` | `/reservas/mis-reservas/{id}` | `ROLE_CLIENTE`, `ROLE_ADMIN` | Detalle de reserva propia (403 si pertenece a otro cliente). |
 | `PATCH` | `/api/reservas/reservas/{id}/cancelar` | `/reservas/{id}/cancelar` | `ROLE_CLIENTE`, `ROLE_ADMIN` | Cancela una reserva propia antes de su inicio. |
-| `GET` | `/api/reservas/reservas` | `/reservas` | `ROLE_ADMIN` | Consulta todas las reservas del restaurante con filtros. |
+| `GET` | `/api/reservas/reservas` | `/reservas` | `ROLE_ADMIN` | Consulta todas las reservas con filtros de mesa, estado y `estadoPago`. |
 | `GET` | `/api/reservas/reservas/{id}` | `/reservas/{id}` | `ROLE_ADMIN`, `ROLE_CLIENTE` | Detalle de reserva (ADMIN ve cualquiera; CLIENTE solo la suya). |
-| `PATCH` | `/api/reservas/reservas/{id}/estado` | `/reservas/{id}/estado` | `ROLE_ADMIN` | Modifica el estado de una reserva (CONFIRMADA, CANCELADA, etc.). |
+| `PATCH` | `/api/reservas/reservas/{id}/estado` | `/reservas/{id}/estado` | `ROLE_ADMIN` | Modifica estado operativo y estado de pago de una reserva. |
+
+> [!NOTE]
+> Para la especificación detallada del modelo de precios, desglose de cotización, temporizador de expiración de 15 minutos y preparación con Mercado Pago, consulte el documento: [CONTRATO_RESERVAS_PRECIOS.md](file:///c:/Users/User/Desktop/CIBERTEC/DSWII - 6to CICLO/raices-criollas-backend-dswii/raices-criollas-reservas/docs/CONTRATO_RESERVAS_PRECIOS.md).
 
 ---
 

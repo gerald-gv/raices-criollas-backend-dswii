@@ -62,13 +62,49 @@ class ReservaControllerSecurityTest {
     @Test
     @DisplayName("9b. Operaciones administrativas: GET /reservas permitido para ADMIN")
     void listarTodas_ConRolAdmin_Retorna200Ok() throws Exception {
-        when(reservaService.listarTodas(any(), any(), any(), any()))
+        when(reservaService.listarTodas(any(), any(), any(), any(), any()))
                 .thenReturn(List.of());
 
         mockMvc.perform(get("/reservas")
                 .with(jwt().jwt(j -> j.subject("1")).authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    @DisplayName("Cotizar reserva es público y retorna 200 OK sin autenticación")
+    void cotizarReserva_SinAutenticacion_Retorna200Ok() throws Exception {
+        com.raicescriollas.reservas.dto.CotizacionRequestDTO request = com.raicescriollas.reservas.dto.CotizacionRequestDTO.builder()
+                .mesaId(1L)
+                .fechaInicio(LocalDateTime.now().plusDays(1).withHour(13))
+                .fechaFin(LocalDateTime.now().plusDays(1).withHour(15))
+                .cantidadPersonas(2)
+                .build();
+
+        com.raicescriollas.reservas.dto.CotizacionResponseDTO response = com.raicescriollas.reservas.dto.CotizacionResponseDTO.builder()
+                .mesaId(1L)
+                .numeroMesa("M-01")
+                .capacidadMesa(4)
+                .precioBaseMesa(new java.math.BigDecimal("20.00"))
+                .tarifaPorPersona(new java.math.BigDecimal("5.00"))
+                .cantidadPersonas(2)
+                .subtotalPersonas(new java.math.BigDecimal("10.00"))
+                .montoTotal(new java.math.BigDecimal("30.00"))
+                .moneda("PEN")
+                .disponible(true)
+                .mensaje("Mesa disponible para cotización")
+                .build();
+
+        when(reservaService.cotizarReserva(any(com.raicescriollas.reservas.dto.CotizacionRequestDTO.class)))
+                .thenReturn(response);
+
+        mockMvc.perform(post("/reservas/cotizar")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.montoTotal").value(30.00))
+                .andExpect(jsonPath("$.data.disponible").value(true));
     }
 
     @Test
@@ -92,7 +128,11 @@ class ReservaControllerSecurityTest {
                 .fechaInicio(inicio)
                 .fechaFin(fin)
                 .cantidadPersonas(2)
-                .estado(EstadoReserva.CONFIRMADA)
+                .montoTotal(new java.math.BigDecimal("30.00"))
+                .moneda("PEN")
+                .estado(EstadoReserva.PENDIENTE)
+                .estadoPago(com.raicescriollas.reservas.enums.EstadoPago.PENDIENTE)
+                .fechaExpiracionPago(LocalDateTime.now().plusMinutes(15))
                 .build();
 
         when(reservaService.crearReserva(any(ReservaRequestDTO.class), eq(100L)))
@@ -105,7 +145,9 @@ class ReservaControllerSecurityTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.id").value(10))
-                .andExpect(jsonPath("$.data.clienteId").value(100));
+                .andExpect(jsonPath("$.data.clienteId").value(100))
+                .andExpect(jsonPath("$.data.montoTotal").value(30.00))
+                .andExpect(jsonPath("$.data.estadoPago").value("PENDIENTE"));
     }
 
     @Test
@@ -130,7 +172,7 @@ class ReservaControllerSecurityTest {
                 .estado(EstadoReserva.CANCELADA)
                 .build();
 
-        when(reservaService.cambiarEstado(10L, EstadoReserva.CANCELADA))
+        when(reservaService.cambiarEstado(10L, EstadoReserva.CANCELADA, null))
                 .thenReturn(response);
 
         mockMvc.perform(patch("/reservas/10/estado")

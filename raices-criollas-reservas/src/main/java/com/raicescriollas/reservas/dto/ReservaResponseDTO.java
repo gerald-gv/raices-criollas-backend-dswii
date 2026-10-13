@@ -1,7 +1,9 @@
 package com.raicescriollas.reservas.dto;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import com.raicescriollas.reservas.enums.EstadoPago;
 import com.raicescriollas.reservas.enums.EstadoReserva;
 
 import lombok.AllArgsConstructor;
@@ -21,8 +23,12 @@ public class ReservaResponseDTO {
     private LocalDateTime fechaInicio;
     private LocalDateTime fechaFin;
     private Integer cantidadPersonas;
+    private BigDecimal montoTotal;
+    private String moneda;
     private EstadoReserva estado;
-    private String observaciones;
+    private EstadoPago estadoPago;
     private LocalDateTime fechaCreacion;
+    private LocalDateTime fechaExpiracionPago;
+    private String observaciones;
     private LocalDateTime fechaActualizacion;
 }
