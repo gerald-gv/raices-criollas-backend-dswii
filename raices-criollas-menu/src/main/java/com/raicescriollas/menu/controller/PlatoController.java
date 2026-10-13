@@ -248,6 +248,18 @@ public class PlatoController {
         service.reponerStock(items);
         return ResponseEntity.ok(new ApiResponse<>(true, "Stock repuesto correctamente", null));
     }
+    
+    /**
+     * Revisa si alcanza el stock de varios platos SIN descontar nada.
+     * Lo llama pedidos antes de mandar al cliente a pagar, reenviando el JWT del cliente.
+     * El descuento real sigue llegando por RabbitMQ al aprobarse el pago.
+     */
+    @PutMapping("/stock/verificar")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<?>> verificarStock(@RequestBody List<StockItemDTO> items) {
+        service.verificarStock(items);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Stock suficiente", null));
+    }
 
     /**
      * Sube una imagen a Cloudinary y devuelve la URL segura.

@@ -177,6 +177,25 @@ public class PlatoService extends ICRUDimpl<Plato, Long> {
 
         return repo.save(plato);
     }
+    
+    /**
+     * Revisa si alcanza el stock de varios platos sin descontar nada (lo usa pedidos antes de mandar al cliente a pagar).
+     * No reserva, solo evita cobrar algo que ya no hay. El descuento real llega por RabbitMQ al aprobarse el pago.
+     */
+    @Transactional(readOnly = true)
+    public void verificarStock(List<StockItemDTO> items) {
+        for (Map.Entry<Long, Integer> item : agrupar(items).entrySet()) {
+            Plato plato = repo.findById(item.getKey())
+                    .orElseThrow(() -> new BusinessException("Un plato de tu pedido ya no existe."));
+
+            if (!Boolean.TRUE.equals(plato.getDisponible())) {
+                throw new BusinessException("«" + plato.getNombre() + "» ya no está disponible.");
+            }
+            if (plato.getStock() < item.getValue()) {
+                throw new BusinessException("No hay stock suficiente de «" + plato.getNombre() + "». Reduce la cantidad o quítalo del pedido.");
+            }
+        }
+    }
 
     /**
      * Repone stock. Si el plato estaba desactivado por stock 0,

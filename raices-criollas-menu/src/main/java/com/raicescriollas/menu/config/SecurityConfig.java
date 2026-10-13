@@ -51,6 +51,12 @@ public class SecurityConfig {
             	        "/platos",
             	        "/platos/admin/**"
             	    ).hasAuthority("ROLE_ADMIN")
+            	    
+            	    // Verificar stock, cualquier usuario autenticado, debe ir antes de /platos/stock/**
+            	    .requestMatchers(
+            	        HttpMethod.PUT,
+            	        "/platos/stock/verificar"
+            	    ).authenticated()
 
             	    // Operaciones de stock por lotes — solo acceso interno vía RabbitMQ,
             	    // estos endpoints quedan restringidos a ROLE_ADMIN únicamente
