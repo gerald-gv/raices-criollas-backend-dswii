@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS mesas (
     numero_mesa VARCHAR(50) NOT NULL,
     capacidad INTEGER NOT NULL,
     ubicacion VARCHAR(255),
+    precio_base NUMERIC(10, 2) NOT NULL DEFAULT 20.00,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
 
     -- Clave Primaria
@@ -36,7 +37,10 @@ CREATE TABLE IF NOT EXISTS mesas (
     CONSTRAINT uk_mesas_numero_mesa UNIQUE (numero_mesa),
 
     -- Restricción de capacidad positiva
-    CONSTRAINT chk_mesas_capacidad_positiva CHECK (capacidad > 0)
+    CONSTRAINT chk_mesas_capacidad_positiva CHECK (capacidad > 0),
+
+    -- Restricción de precio base positivo
+    CONSTRAINT chk_mesas_precio_base_positivo CHECK (precio_base >= 0)
 );
 
 COMMENT ON TABLE mesas IS 'Catálogo de mesas físicas del restaurante para el módulo de reservas';
@@ -44,6 +48,7 @@ COMMENT ON COLUMN mesas.id IS 'Identificador único de la mesa (Generado por ide
 COMMENT ON COLUMN mesas.numero_mesa IS 'Código o número único de la mesa (ej. M-01, VIP-1)';
 COMMENT ON COLUMN mesas.capacidad IS 'Capacidad máxima de comensales sentados en la mesa';
 COMMENT ON COLUMN mesas.ubicacion IS 'Descripción física o sector de la mesa (ej. Terraza, Salón Principal, Ventana)';
+COMMENT ON COLUMN mesas.precio_base IS 'Tarifa base de la mesa en Soles (PEN)';
 COMMENT ON COLUMN mesas.activo IS 'Estado operativo de la mesa (TRUE = Habilitada, FALSE = Fuera de servicio)';
 
 -- =============================================================================
@@ -57,7 +62,11 @@ CREATE TABLE IF NOT EXISTS reservas (
     fecha_inicio TIMESTAMP WITHOUT TIME ZONE NOT NULL,
     fecha_fin TIMESTAMP WITHOUT TIME ZONE NOT NULL,
     cantidad_personas INTEGER NOT NULL,
+    monto_total NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
+    moneda VARCHAR(3) NOT NULL DEFAULT 'PEN',
     estado VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE',
+    estado_pago VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE',
+    fecha_expiracion_pago TIMESTAMP WITHOUT TIME ZONE,
     observaciones VARCHAR(500),
     fecha_creacion TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion TIMESTAMP WITHOUT TIME ZONE,
@@ -75,7 +84,9 @@ CREATE TABLE IF NOT EXISTS reservas (
     -- Restricciones de integridad y validaciones de negocio
     CONSTRAINT chk_reservas_cantidad_personas CHECK (cantidad_personas > 0),
     CONSTRAINT chk_reservas_fechas_coherentes CHECK (fecha_inicio < fecha_fin),
-    CONSTRAINT chk_reservas_estado_valido CHECK (estado IN ('PENDIENTE', 'CONFIRMADA', 'CANCELADA', 'COMPLETADA'))
+    CONSTRAINT chk_reservas_monto_total_positivo CHECK (monto_total >= 0),
+    CONSTRAINT chk_reservas_estado_valido CHECK (estado IN ('PENDIENTE', 'CONFIRMADA', 'CANCELADA', 'COMPLETADA')),
+    CONSTRAINT chk_reservas_estado_pago_valido CHECK (estado_pago IN ('PENDIENTE', 'PAGADO', 'FALLIDO', 'REEMBOLSADO'))
 );
 
 COMMENT ON TABLE reservas IS 'Registro de reservas de mesas efectuadas por clientes';
@@ -85,7 +96,11 @@ COMMENT ON COLUMN reservas.mesa_id IS 'Referencia a la mesa reservada';
 COMMENT ON COLUMN reservas.fecha_inicio IS 'Fecha y hora pactada para el inicio de la reserva';
 COMMENT ON COLUMN reservas.fecha_fin IS 'Fecha y hora de finalización del intervalo reservado';
 COMMENT ON COLUMN reservas.cantidad_personas IS 'Número de comensales para los que se reserva la mesa';
-COMMENT ON COLUMN reservas.estado IS 'Estado actual: PENDIENTE, CONFIRMADA, CANCELADA o COMPLETADA';
+COMMENT ON COLUMN reservas.monto_total IS 'Importe total de la reserva calculado por el backend';
+COMMENT ON COLUMN reservas.moneda IS 'Código de la moneda oficial (PEN)';
+COMMENT ON COLUMN reservas.estado IS 'Estado operativo: PENDIENTE, CONFIRMADA, CANCELADA o COMPLETADA';
+COMMENT ON COLUMN reservas.estado_pago IS 'Estado del pago: PENDIENTE, PAGADO, FALLIDO o REEMBOLSADO';
+COMMENT ON COLUMN reservas.fecha_expiracion_pago IS 'Fecha y hora límite de tolerancia de pago tras la cual se libera la mesa';
 COMMENT ON COLUMN reservas.observaciones IS 'Notas adicionales del comensal o solicitudes especiales';
 COMMENT ON COLUMN reservas.fecha_creacion IS 'Marca de tiempo en que se registró la reserva en el sistema';
 COMMENT ON COLUMN reservas.fecha_actualizacion IS 'Marca de tiempo de la última modificación o cambio de estado';
@@ -98,6 +113,14 @@ COMMENT ON COLUMN reservas.fecha_actualizacion IS 'Marca de tiempo de la última
 -- Índice para acelerar la verificación de solapamiento de horarios y disponibilidad
 CREATE INDEX IF NOT EXISTS idx_reservas_mesa_horario 
     ON reservas (mesa_id, estado, fecha_inicio, fecha_fin);
+
+-- Índice para acelerar verificación de solapamiento considerando estado de pago y expiración
+CREATE INDEX IF NOT EXISTS idx_reservas_mesa_horario_pago 
+    ON reservas (mesa_id, estado, estado_pago, fecha_inicio, fecha_fin, fecha_expiracion_pago);
+
+-- Índice para consulta rápida de reservas pendientes por expirar
+CREATE INDEX IF NOT EXISTS idx_reservas_pago_expiracion 
+    ON reservas (estado, estado_pago, fecha_expiracion_pago);
 
 -- Índice para consulta rápida de historial del cliente ("mis-reservas")
 CREATE INDEX IF NOT EXISTS idx_reservas_cliente_fecha 

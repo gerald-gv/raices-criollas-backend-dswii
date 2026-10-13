@@ -1,8 +1,8 @@
 package com.raicescriollas.reservas.dto;
 
+import com.raicescriollas.reservas.enums.EstadoPago;
 import com.raicescriollas.reservas.enums.EstadoReserva;
 
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,6 +14,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class ActualizarEstadoReservaDTO {
 
-    @NotNull(message = "El estado de la reserva es obligatorio")
     private EstadoReserva estado;
+
+    private EstadoPago estadoPago;
 }

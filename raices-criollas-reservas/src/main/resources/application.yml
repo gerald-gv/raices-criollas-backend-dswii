@@ -7,7 +7,7 @@ spring:
   datasource:
     url: "${DB_URL:jdbc:postgresql://localhost:5432/reservas_db}"
     username: "${DB_USER:postgres}"
-    password: "${DB_PASSWORD:pgsql}"
+    password: "${DB_PASSWORD:YOUR_PASSWORD}"
   jpa:
     hibernate:
       ddl-auto: update
@@ -20,6 +20,10 @@ app:
   jwt:
     issuer: auth-service
     secret: "${JWT_SECRET}"
+  reservas:
+    tiempo-expiracion-minutos: ${RESERVA_EXPIRACION_MINUTOS:15}
+    tarifa-base-mesa-default: ${RESERVA_TARIFA_BASE:20.00}
+    tarifa-por-persona-default: ${RESERVA_TARIFA_PERSONA:5.00}
 
 eureka:
   instance:

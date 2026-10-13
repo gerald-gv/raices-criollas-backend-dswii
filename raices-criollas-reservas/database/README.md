@@ -23,8 +23,9 @@ El proyecto Raíces Criollas aplica el patrón **Database per Service**:
 | Archivo | Base de Datos en la que debe ejecutarse | Propósito |
 | :--- | :--- | :--- |
 | `01_crear_base_datos.sql` | **`postgres`** (o base de mantenimiento) | Crea la base de datos `reservas_db` en el servidor local. |
-| `02_esquema_reservas.sql` | **`reservas_db`** | Crea las tablas `mesas` y `reservas`, restricciones, checks e índices. |
-| `03_datos_prueba_reservas.sql` | **`reservas_db`** (Opcional) | Carga 10 mesas iniciales con diferentes capacidades y ubicaciones. |
+| `02_esquema_reservas.sql` | **`reservas_db`** | Crea las tablas `mesas` y `reservas` desde cero con soporte para precios, estado de pago y expiración. |
+| `03_datos_prueba_reservas.sql` | **`reservas_db`** (Opcional) | Carga 10 mesas iniciales con precios base diferenciados por zona y capacidad. |
+| `04_migracion_precios_y_pagos.sql` | **`reservas_db`** | Script de migración **no destructivo** para bases de datos existentes: añade `precio_base` a `mesas` y `monto_total`, `moneda`, `estado_pago`, `fecha_expiracion_pago` a `reservas`. |
 
 ---
 

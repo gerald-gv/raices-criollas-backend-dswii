@@ -13,6 +13,10 @@ app:
   jwt:
     issuer: auth-service
     secret: "dGhpc2lzYXZlcnlzZWNyZXRrZXlmb3J0ZXN0aW5ncHVycG9zZXMxMjM0NTY3ODk="
+  reservas:
+    tiempo-expiracion-minutos: 15
+    tarifa-base-mesa-default: 20.00
+    tarifa-por-persona-default: 5.00
 
 eureka:
   client:

@@ -29,8 +29,9 @@ public class SecurityConfig {
         http.csrf(csrf -> csrf.disable())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(a -> a
-                // Consulta pública de mesas disponibles
+                // Consulta pública de mesas disponibles y cotización previa
                 .requestMatchers(HttpMethod.GET, "/mesas/disponibles").permitAll()
+                .requestMatchers(HttpMethod.POST, "/reservas/cotizar").permitAll()
 
                 // Gestión administrativa de mesas (solo ROLE_ADMIN)
                 .requestMatchers(HttpMethod.POST, "/mesas").hasAuthority("ROLE_ADMIN")

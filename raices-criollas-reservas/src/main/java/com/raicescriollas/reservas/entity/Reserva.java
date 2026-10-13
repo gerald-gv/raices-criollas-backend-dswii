@@ -1,7 +1,9 @@
 package com.raicescriollas.reservas.entity;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import com.raicescriollas.reservas.enums.EstadoPago;
 import com.raicescriollas.reservas.enums.EstadoReserva;
 
 import jakarta.persistence.Column;
@@ -50,9 +52,25 @@ public class Reserva {
     @Column(name = "cantidad_personas", nullable = false)
     private Integer cantidadPersonas;
 
+    @Column(name = "monto_total", nullable = false, precision = 10, scale = 2)
+    private BigDecimal montoTotal;
+
+    @Column(nullable = false, length = 3)
+    @Builder.Default
+    private String moneda = "PEN";
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private EstadoReserva estado;
+    @Builder.Default
+    private EstadoReserva estado = EstadoReserva.PENDIENTE;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado_pago", nullable = false, length = 20)
+    @Builder.Default
+    private EstadoPago estadoPago = EstadoPago.PENDIENTE;
+
+    @Column(name = "fecha_expiracion_pago")
+    private LocalDateTime fechaExpiracionPago;
 
     @Column(length = 500)
     private String observaciones;
@@ -68,6 +86,12 @@ public class Reserva {
         this.fechaCreacion = LocalDateTime.now();
         if (this.estado == null) {
             this.estado = EstadoReserva.PENDIENTE;
+        }
+        if (this.estadoPago == null) {
+            this.estadoPago = EstadoPago.PENDIENTE;
+        }
+        if (this.moneda == null) {
+            this.moneda = "PEN";
         }
     }
 

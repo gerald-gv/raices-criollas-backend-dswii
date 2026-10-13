@@ -16,20 +16,21 @@
 --   de los identificadores de usuario (sub).
 -- =============================================================================
 
-INSERT INTO mesas (numero_mesa, capacidad, ubicacion, activo) VALUES
-('M-01', 2, 'Salón Principal - Cerca a la Ventana', TRUE),
-('M-02', 2, 'Salón Principal - Zona Centro', TRUE),
-('M-03', 4, 'Salón Principal - Esquina Romántica', TRUE),
-('M-04', 4, 'Salón Principal - Zona Central', TRUE),
-('M-05', 4, 'Terraza Exterior - Vista al Jardín', TRUE),
-('M-06', 6, 'Terraza Exterior - Zona Fresca', TRUE),
-('M-07', 6, 'Balcón Criollo - Segundo Nivel', TRUE),
-('M-08', 8, 'Salón Tradición - Zona Familiar', TRUE),
-('M-09', 10, 'Área VIP Privada - Salón Bicentenario', TRUE),
-('M-10', 4, 'Mesa de Mantenimiento - Inactiva', FALSE)
+INSERT INTO mesas (numero_mesa, capacidad, ubicacion, precio_base, activo) VALUES
+('M-01', 2, 'Salón Principal - Cerca a la Ventana', 20.00, TRUE),
+('M-02', 2, 'Salón Principal - Zona Centro', 20.00, TRUE),
+('M-03', 4, 'Salón Principal - Esquina Romántica', 25.00, TRUE),
+('M-04', 4, 'Salón Principal - Zona Central', 25.00, TRUE),
+('M-05', 4, 'Terraza Exterior - Vista al Jardín', 30.00, TRUE),
+('M-06', 6, 'Terraza Exterior - Zona Fresca', 35.00, TRUE),
+('M-07', 6, 'Balcón Criollo - Segundo Nivel', 35.00, TRUE),
+('M-08', 8, 'Salón Tradición - Zona Familiar', 40.00, TRUE),
+('M-09', 10, 'Área VIP Privada - Salón Bicentenario', 60.00, TRUE),
+('M-10', 4, 'Mesa de Mantenimiento - Inactiva', 20.00, FALSE)
 ON CONFLICT (numero_mesa) DO UPDATE SET
     capacidad = EXCLUDED.capacidad,
     ubicacion = EXCLUDED.ubicacion,
+    precio_base = EXCLUDED.precio_base,
     activo = EXCLUDED.activo;
 
 -- =============================================================================

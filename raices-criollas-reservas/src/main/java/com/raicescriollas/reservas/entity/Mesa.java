@@ -1,5 +1,7 @@
 package com.raicescriollas.reservas.entity;
 
+import java.math.BigDecimal;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -31,6 +33,9 @@ public class Mesa {
 
     @Column(length = 255)
     private String ubicacion;
+
+    @Column(name = "precio_base", precision = 10, scale = 2)
+    private BigDecimal precioBase;
 
     @Column(nullable = false)
     @Builder.Default
