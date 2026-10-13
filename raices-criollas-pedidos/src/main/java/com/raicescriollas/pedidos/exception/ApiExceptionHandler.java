@@ -42,6 +42,20 @@ public class ApiExceptionHandler {
 		return ResponseEntity.badRequest().body(new ApiResponse<>(false, "Cuerpo de la peticion invalido", null));
 	}
 
+	// Menu explica el conflicto de stock («No hay stock suficiente de X...»): se le muestra al cliente
+	@ExceptionHandler(FeignException.Conflict.class)
+	public ResponseEntity<ApiResponse<Void>> menuConflict(FeignException.Conflict e) {
+		String mensaje = "No hay stock suficiente para completar el pedido.";
+		try {
+			var nodo = new com.fasterxml.jackson.databind.ObjectMapper().readTree(e.contentUTF8()).path("mensaje");
+			if (nodo.isTextual() && !nodo.asText().isBlank())
+				mensaje = nodo.asText();
+		} catch (Exception ignorada) {
+			// se queda el mensaje generico
+		}
+		return ResponseEntity.status(HttpStatus.CONFLICT).body(new ApiResponse<>(false, mensaje, null));
+	}
+
 	@ExceptionHandler(FeignException.NotFound.class)
 	public ResponseEntity<ApiResponse<Void>> menuMissing(FeignException.NotFound e) {
 		return ResponseEntity.badRequest()

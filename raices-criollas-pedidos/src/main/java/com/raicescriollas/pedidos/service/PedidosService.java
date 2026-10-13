@@ -7,6 +7,7 @@ import com.raicescriollas.pedidos.entity.*;
 import com.raicescriollas.pedidos.enums.EstadoPedido;
 import com.raicescriollas.pedidos.messaging.PedidoEventPublisher;
 import com.raicescriollas.pedidos.repository.*;
+import com.raicescriollas.pedidos.utils.SecurityUtils;
 
 import feign.FeignException;
 
@@ -159,7 +160,8 @@ public class PedidosService {
 
 	// ---------- Continuar compra ----------
 
-	// Crea el pedido PENDIENTE_PAGO con los precios de hoy. No toca el stock
+	// Crea el pedido PENDIENTE_PAGO con los precios de hoy. No descuenta stock (eso lo hace RabbitMQ al pagarse),
+	// pero SI revisa que alcance, para no mandar al cliente a pagar algo que no hay.
 	@Transactional
 	public PedidoResponse confirmar(Long clienteId) {
 		validarCliente(clienteId);
@@ -167,10 +169,6 @@ public class PedidosService {
 				.orElseThrow(() -> new IllegalArgumentException("Carrito vacio"));
 		if (carrito.getItems().isEmpty())
 			throw new IllegalArgumentException("Carrito vacio");
-
-		// Un solo pedido pendiente por cliente: si vuelve a continuar, el anterior se reemplaza
-		for (Pedido previo : pedidos.findByClienteIdAndEstado(clienteId, EstadoPedido.PENDIENTE_PAGO.name()))
-			previo.setEstado(EstadoPedido.CANCELADO.name());
 
 		Pedido pedido = new Pedido();
 		pedido.setClienteId(clienteId);
@@ -190,7 +188,59 @@ public class PedidosService {
 			pedido.getDetalles().add(detalle);
 		}
 		pedido.setTotal(total);
+		verificarStock(pedido);
+
+		// Si el cliente vuelve a continuar con lo mismo, se reutiliza el pedido pendiente (misma clave de pago en MP);
+		// cualquier otro pendiente distinto se cancela
+		Pedido reutilizable = null;
+		for (Pedido previo : pedidos.findByClienteIdAndEstado(clienteId, EstadoPedido.PENDIENTE_PAGO.name())) {
+			if (reutilizable == null && mismoContenido(previo, pedido)) {
+				reutilizable = previo;
+			} else {
+				previo.setEstado(EstadoPedido.CANCELADO.name());
+			}
+		}
+
+		if (reutilizable != null) {
+			// Vuelve a empezar el plazo de pago (si no, podria vencer mientras el cliente paga)
+			reutilizable.setFecha(LocalDateTime.now());
+			return mapPedido(pedidos.save(reutilizable));
+		}
 		return mapPedido(pedidos.save(pedido));
+	}
+
+	// Para "Pagar ahora" en un pedido que quedo pendiente: revisa el stock de ESE pedido antes de ir a Mercado Pago
+	@Transactional(readOnly = true)
+	public void verificarStockPedido(Long id, Long clienteId, String bearer) {
+		Pedido pedido = buscarVisible(id, clienteId, false);
+		if (estadoDe(pedido) != EstadoPedido.PENDIENTE_PAGO)
+			throw new IllegalStateException("El pedido no esta pendiente de pago");
+		menu.verificarStock(bearer, itemsDe(pedido));
+	}
+
+	private void verificarStock(Pedido pedido) {
+		menu.verificarStock(SecurityUtils.getCurrentBearer(), itemsDe(pedido));
+	}
+
+	private List<PlatoClient.ItemStock> itemsDe(Pedido pedido) {
+		List<PlatoClient.ItemStock> items = new ArrayList<>();
+		for (DetallePedido d : pedido.getDetalles())
+			items.add(new PlatoClient.ItemStock(d.getPlatoId(), d.getCantidad()));
+		return items;
+	}
+
+	private boolean mismoContenido(Pedido a, Pedido b) {
+		if (a.getDetalles().size() != b.getDetalles().size())
+			return false;
+		for (DetallePedido da : a.getDetalles()) {
+			boolean igual = b.getDetalles().stream()
+					.anyMatch(db -> db.getPlatoId().equals(da.getPlatoId())
+							&& db.getCantidad().equals(da.getCantidad())
+							&& db.getPrecioUnitario().compareTo(da.getPrecioUnitario()) == 0);
+			if (!igual)
+				return false;
+		}
+		return true;
 	}
 
 	// Pedidos del cliente 
@@ -375,3 +425,4 @@ public class PedidosService {
 		return new PedidoResponse(p.getId(), p.getClienteId(), p.getFecha(), p.getEstado(), p.getTotal(), detalles);
 	}
 }
+

@@ -82,6 +82,13 @@ public class PedidosController {
 				service.buscarPedido(id, SecurityUtils.getCurrentUserId(), SecurityUtils.isAdmin())));
 	}
 
+	// "Pagar ahora" en un pedido pendiente: revisa el stock de ESE pedido antes de ir a Mercado Pago
+	@PostMapping("/{id}/verificar-stock")
+	public ResponseEntity<ApiResponse<Void>> verificarStock(@PathVariable Long id) {
+		service.verificarStockPedido(id, SecurityUtils.getCurrentUserId(), SecurityUtils.getCurrentBearer());
+		return ResponseEntity.ok(new ApiResponse<>(true, "Stock suficiente", null));
+	}
+
 	@PatchMapping("/{id}/cancelar")
 	public ResponseEntity<ApiResponse<PedidoResponse>> cancelar(@PathVariable Long id) {
 		

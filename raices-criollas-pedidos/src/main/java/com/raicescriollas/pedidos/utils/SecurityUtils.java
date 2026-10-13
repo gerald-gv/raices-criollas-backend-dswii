@@ -21,6 +21,14 @@ public final class SecurityUtils {
 			throw new AccessDeniedException("Identificador de usuario invalido en el token");
 		}
 	}
+	
+	// JWT del usuario actual, para reenviarlo a otros microservicios
+	public static String getCurrentBearer() {
+		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+		if (auth == null || !(auth.getPrincipal() instanceof Jwt jwt))
+			throw new AccessDeniedException("Usuario no autenticado");
+		return "Bearer " + jwt.getTokenValue();
+	}
 
 	public static boolean isAdmin() {
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
