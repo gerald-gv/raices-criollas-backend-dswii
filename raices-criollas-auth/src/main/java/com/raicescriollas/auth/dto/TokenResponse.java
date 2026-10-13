@@ -1,5 +1,9 @@
 package com.raicescriollas.auth.dto;
 
-public record TokenResponse(String accessToken, String tokenType, long expiresIn) {
+import com.fasterxml.jackson.annotation.JsonProperty;
 
+public record TokenResponse(
+        @JsonProperty("accessToken") String accessToken,
+        @JsonProperty("tokenType")   String tokenType,
+        @JsonProperty("expiresIn")   long expiresIn) {
 }

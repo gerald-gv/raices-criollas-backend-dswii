@@ -52,17 +52,17 @@ public class SecurityConfig {
             	        "/platos/admin/**"
             	    ).hasAuthority("ROLE_ADMIN")
 
-            	    // Operaciones de stock, admin o microservicio interno (ROLE_SERVICE)
+            	    // Operaciones de stock por lotes — solo acceso interno vía RabbitMQ,
+            	    // estos endpoints quedan restringidos a ROLE_ADMIN únicamente
             	    .requestMatchers(
             	        HttpMethod.PUT,
             	        "/platos/*/reducir-stock"
-            	    ).hasAnyAuthority("ROLE_ADMIN", "ROLE_SERVICE")
+            	    ).hasAuthority("ROLE_ADMIN")
 
-            	    // Stock por lotes, solo microservicios internos
             	    .requestMatchers(
             	        HttpMethod.PUT,
             	        "/platos/stock/**"
-            	    ).hasAuthority("ROLE_SERVICE")
+            	    ).hasAuthority("ROLE_ADMIN")
             	    
             	    // Todo lo demas requiere admin
             	    .anyRequest()

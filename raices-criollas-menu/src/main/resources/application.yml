@@ -17,6 +17,11 @@ spring:
         format_sql: true
   messages:
     basename: validaciones
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
 
 cloudinary:
   cloud-name: ${CLOUDINARY_CLOUD_NAME}

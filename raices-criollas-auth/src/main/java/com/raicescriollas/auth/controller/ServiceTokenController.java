@@ -1,5 +1,6 @@
 package com.raicescriollas.auth.controller;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -30,5 +31,7 @@ public class ServiceTokenController {
         return ResponseEntity.ok(new TokenResponse(token, "Bearer", jwtService.accessTokenTtlSeconds()));
     }
 
-    public record ServiceTokenRequest(String serviceName, String secret) {}
+    public record ServiceTokenRequest(
+            @JsonProperty("serviceName") String serviceName,
+            @JsonProperty("secret") String secret) {}
 }
