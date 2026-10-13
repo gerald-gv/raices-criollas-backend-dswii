@@ -203,11 +203,10 @@ public class PlatoController {
 
     /**
      * Reduce el stock de un plato. Si llega a 0 se desactiva automáticamente.
-     * Consumido por ROLE_ADMIN (panel) o ROLE_SERVICE (microservicio de pedidos).
-     * El microservicio de pedidos debe incluir ROLE_SERVICE en su JWT al llamar este endpoint.
+     * Solo accesible por administradores — el descuento por pedidos llega vía RabbitMQ.
      */
     @PutMapping("/{id}/reducir-stock")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_SERVICE')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<ApiResponse<?>> reducirStock(
             @PathVariable Long id,
             @RequestParam int cantidad) throws Exception {
@@ -234,17 +233,17 @@ public class PlatoController {
                         mapper.map(actualizado, PlatoDTO.class)));
     }
 
-    /** Reduce el stock de varios platos a la vez. Solo microservicios internos (pedidos). */
+    /** Reduce el stock de varios platos a la vez. Solo desde el panel admin — pedidos usa RabbitMQ. */
     @PutMapping("/stock/reducir")
-    @PreAuthorize("hasAuthority('ROLE_SERVICE')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<ApiResponse<?>> reducirStockLote(@RequestBody List<StockItemDTO> items) {
         service.reducirStock(items);
         return ResponseEntity.ok(new ApiResponse<>(true, "Stock reducido correctamente", null));
     }
 
-    /** Devuelve el stock de varios platos a la vez. Solo microservicios internos. */
+    /** Devuelve el stock de varios platos a la vez. Solo desde el panel admin — pedidos usa RabbitMQ. */
     @PutMapping("/stock/reponer")
-    @PreAuthorize("hasAuthority('ROLE_SERVICE')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<ApiResponse<?>> reponerStockLote(@RequestBody List<StockItemDTO> items) {
         service.reponerStock(items);
         return ResponseEntity.ok(new ApiResponse<>(true, "Stock repuesto correctamente", null));

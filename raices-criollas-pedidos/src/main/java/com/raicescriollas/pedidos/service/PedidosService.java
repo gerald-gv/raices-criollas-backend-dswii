@@ -5,6 +5,7 @@ import com.raicescriollas.pedidos.client.PlatoClient;
 import com.raicescriollas.pedidos.dto.*;
 import com.raicescriollas.pedidos.entity.*;
 import com.raicescriollas.pedidos.enums.EstadoPedido;
+import com.raicescriollas.pedidos.messaging.PedidoEventPublisher;
 import com.raicescriollas.pedidos.repository.*;
 
 import feign.FeignException;
@@ -35,13 +36,14 @@ public class PedidosService {
 	private final CarritoRepository carritos;
 	private final PedidoRepository pedidos;
 	private final PlatoClient menu;
-	private final StockService stock;
+	private final PedidoEventPublisher eventPublisher;
 
-	public PedidosService(CarritoRepository carritos, PedidoRepository pedidos, PlatoClient menu, StockService stock) {
+	public PedidosService(CarritoRepository carritos, PedidoRepository pedidos, PlatoClient menu,
+			PedidoEventPublisher eventPublisher) {
 		this.carritos = carritos;
 		this.pedidos = pedidos;
 		this.menu = menu;
-		this.stock = stock;
+		this.eventPublisher = eventPublisher;
 	}
 
 	// Carrito 
@@ -254,9 +256,10 @@ public class PedidosService {
 		pedido.setEstado(nuevo.name());
 		Pedido guardado = pedidos.save(pedido);
 
-		// El stock se descuenta al pagar, solo se devuelve si el pedido ya estaba pagado
-		if (nuevo == EstadoPedido.CANCELADO && actual != EstadoPedido.PENDIENTE_PAGO)
-			stock.devolver(itemsDe(guardado));
+		// Si se cancela un pedido ya pagado, publica el evento para que menu-service reponga el stock
+		if (nuevo == EstadoPedido.CANCELADO && actual != EstadoPedido.PENDIENTE_PAGO) {
+			eventPublisher.publicarPedidoCanceladoPagado(guardado);
+		}
 		return mapPedido(guardado);
 	}
 
@@ -274,11 +277,16 @@ public class PedidosService {
 		if (actual != EstadoPedido.PENDIENTE_PAGO)
 			return mapPedido(pedido);
 
-		// Si no alcanza el stock lanza IllegalStateException (409) y el pedido queda como estaba
-		stock.descontar(itemsDe(pedido));
 		pedido.setEstado(EstadoPedido.PAGADO.name());
+		Pedido guardado = pedidos.save(pedido);
+
+		// El pedido está confirmado y pagado: el carrito ya no tiene utilidad
 		carritos.findByClienteId(pedido.getClienteId()).ifPresent(carritos::delete);
-		return mapPedido(pedidos.save(pedido));
+
+		// Publica el evento pedido.pagado → RabbitMQ → menu-service descuenta el stock de forma asíncrona
+		eventPublisher.publicarPedidoPagado(guardado);
+
+		return mapPedido(guardado);
 	}
 
 	// Expiracion
@@ -313,13 +321,6 @@ public class PedidosService {
 
 	private void tocar(Carrito carrito) {
 		carrito.setActualizadoEn(LocalDateTime.now());
-	}
-
-	private List<PlatoClient.ItemStock> itemsDe(Pedido pedido) {
-		List<PlatoClient.ItemStock> items = new ArrayList<>();
-		for (DetallePedido d : pedido.getDetalles())
-			items.add(new PlatoClient.ItemStock(d.getPlatoId(), d.getCantidad()));
-		return items;
 	}
 
 	// para agregar y continuar la compra, el plato debe existir y estar disponible

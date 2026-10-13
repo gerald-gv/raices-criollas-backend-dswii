@@ -16,6 +16,13 @@ spring:
               predicates:
                 - Path=/api/auth/**
 
+            - id: auth-internal
+              uri: lb://raices-criollas-auth
+              predicates:
+                - Path=/api/auth-internal/**
+              filters:
+                - RewritePath=/api/auth-internal/(?<segment>.*), /internal/${segment}
+
             - id: menu
               uri: lb://raices-criollas-menu
               predicates:

@@ -50,7 +50,11 @@ public class ApiExceptionHandler {
 
 	@ExceptionHandler(FeignException.class)
 	public ResponseEntity<ApiResponse<Void>> menuError(FeignException e) {
+		// Log completo para diagnóstico — incluye URL, status y body de la respuesta
+		org.slf4j.LoggerFactory.getLogger(ApiExceptionHandler.class)
+				.error("[Feign] status={} url={} body={}", e.status(), e.request() != null ? e.request().url() : "?",
+						e.contentUTF8(), e);
 		return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
-				.body(new ApiResponse<>(false, "No se pudo consultar el microservicio Menu", null));
+				.body(new ApiResponse<>(false, "No se pudo consultar el microservicio Menu [" + e.status() + "]", null));
 	}
 }
