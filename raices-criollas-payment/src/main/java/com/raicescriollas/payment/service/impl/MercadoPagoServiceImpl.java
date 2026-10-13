@@ -63,7 +63,7 @@ public class MercadoPagoServiceImpl implements IMercadoPagoService {
 
             log.info("Preferencia {} creada para el pago {} con notification_url = {}",
                     preference.getId(), pago.getId(),
-                    notificationUrl.isBlank() ? "(vacia)" : notificationUrl);
+                    notificationUrl == null ? "(vacia)" : notificationUrl);
 
             return new PreferenciaCreada(preference.getId(), preference.getInitPoint());
 
