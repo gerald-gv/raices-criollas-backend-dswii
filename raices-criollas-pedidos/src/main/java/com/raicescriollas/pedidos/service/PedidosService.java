@@ -277,6 +277,7 @@ public class PedidosService {
 		// Si no alcanza el stock lanza IllegalStateException (409) y el pedido queda como estaba
 		stock.descontar(itemsDe(pedido));
 		pedido.setEstado(EstadoPedido.PAGADO.name());
+		carritos.findByClienteId(pedido.getClienteId()).ifPresent(carritos::delete);
 		return mapPedido(pedidos.save(pedido));
 	}
 

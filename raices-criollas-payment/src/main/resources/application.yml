@@ -23,7 +23,7 @@ app:
     secret: "${INTERNAL_SECRET:antiCibertec}"
   mercadopago:
     access-token: "${MP_ACCESS_TOKEN}"
-    frontend-url: "${FRONTEND_URL:http://localhost:4200}"
+    frontend-url: "${FRONTEND_URL:http://localhost:3000}"
     public-url: "${MP_PUBLIC_URL:}"
 eureka:
   instance:

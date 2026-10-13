@@ -29,6 +29,12 @@ public class PedidosController {
 		return ResponseEntity
 				.ok(new ApiResponse<>(true, "Carrito consultado", service.verCarrito(SecurityUtils.getCurrentUserId())));
 	}
+	
+	@PutMapping("/carrito")
+	public ResponseEntity<ApiResponse<CarritoResponse>> reemplazarCarrito(@Valid @RequestBody ReemplazarCarritoRequest r) {
+		
+		return ResponseEntity.ok(new ApiResponse<>(true, "Carrito actualizado", service.reemplazarCarrito(SecurityUtils.getCurrentUserId(), r.items())));
+	}
 
 	@PostMapping("/carrito/items")
 	public ResponseEntity<ApiResponse<CarritoResponse>> agregar(@Valid @RequestBody AgregarItemRequest r) {
