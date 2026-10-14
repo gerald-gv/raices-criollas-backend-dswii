@@ -42,6 +42,15 @@ public class Usuario {
 
     @Column(length = 20)
     private String telefono;
+    
+    @Column(length = 200)
+    private String direccion;
+
+    @Column(length = 100)
+    private String distrito;
+
+    @Column(length = 200)
+    private String referencia;
 
     @Column(nullable = false)
     @Builder.Default

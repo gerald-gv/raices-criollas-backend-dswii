@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.raicescriollas.auth.dto.ChangePasswordRequest;
+import com.raicescriollas.auth.dto.DireccionRequest;
 import com.raicescriollas.auth.dto.UpdatePerfilRequest;
 import com.raicescriollas.auth.dto.UsuarioResponse;
 import com.raicescriollas.auth.entity.Usuario;
@@ -12,6 +13,7 @@ import com.raicescriollas.auth.exception.CampoInvalidoException;
 import com.raicescriollas.auth.exception.InvalidCredentialsException;
 import com.raicescriollas.auth.repository.UsuarioRepository;
 import com.raicescriollas.auth.service.IPerfilService;
+import com.raicescriollas.auth.utils.Validaciones;
 
 import lombok.RequiredArgsConstructor;
 
@@ -34,8 +36,19 @@ public class PerfilServiceImpl implements IPerfilService {
         Usuario usuario = buscar(userId);
         usuario.setNombre(request.nombre().trim());
         usuario.setApellido(request.apellido().trim());
-        usuario.setTelefono(request.telefono() == null || request.telefono().isBlank() ? null : request.telefono().trim());
+        usuario.setTelefono(Validaciones.normalizarTelefono(request.telefono()));
         return UsuarioResponse.from(usuario);   // el cambio se guarda al cerrar la transaccion
+    }
+
+    @Override
+    @Transactional
+    public UsuarioResponse actualizarDireccion(Long userId, DireccionRequest request) {
+        Usuario usuario = buscar(userId);
+        usuario.setDireccion(request.direccion().trim());
+        usuario.setDistrito(request.distrito().trim());
+        usuario.setReferencia(request.referencia() == null || request.referencia().isBlank() ? null : request.referencia().trim());
+        usuario.setTelefono(Validaciones.normalizarTelefono(request.telefono()));
+        return UsuarioResponse.from(usuario);
     }
 
     @Override

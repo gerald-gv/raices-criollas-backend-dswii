@@ -27,6 +27,12 @@ public class Pedido {
 	@Column(nullable = false, precision = 12, scale = 2)
 	private BigDecimal total;
 	
+	@Column(length = 500)
+	private String direccionEntrega;
+
+	@Column(length = 20)
+	private String telefonoContacto;
+
 	@OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<DetallePedido> detalles = new ArrayList<>();
 
@@ -64,6 +70,22 @@ public class Pedido {
 
 	public void setTotal(BigDecimal total) {
 		this.total = total;
+	}
+
+	public String getDireccionEntrega() {
+		return direccionEntrega;
+	}
+
+	public void setDireccionEntrega(String direccionEntrega) {
+		this.direccionEntrega = direccionEntrega;
+	}
+
+	public String getTelefonoContacto() {
+		return telefonoContacto;
+	}
+
+	public void setTelefonoContacto(String telefonoContacto) {
+		this.telefonoContacto = telefonoContacto;
 	}
 
 	public List<DetallePedido> getDetalles() {

@@ -17,6 +17,7 @@ import com.raicescriollas.auth.repository.RolRepository;
 import com.raicescriollas.auth.repository.UsuarioRepository;
 import com.raicescriollas.auth.service.IAuthService;
 import com.raicescriollas.auth.service.ITokenService;
+import com.raicescriollas.auth.utils.Validaciones;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -47,7 +48,7 @@ public class AuthServiceImpl implements IAuthService {
                 .nombre(request.nombre().trim())
                 .apellido(request.apellido().trim())
                 .email(email)
-                .telefono(request.telefono())
+                .telefono(Validaciones.normalizarTelefono(request.telefono()))
                 .passwordHash(passwordEncoder.encode(request.password()))
                 .rol(rolCliente)
                 .build();

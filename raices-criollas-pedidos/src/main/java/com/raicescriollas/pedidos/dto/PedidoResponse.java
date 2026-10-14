@@ -6,5 +6,5 @@ import java.util.List;
 
 
 public record PedidoResponse(Long id, Long clienteId, LocalDateTime fecha, String estado, BigDecimal total,
-		List<DetallePedidoResponse> detalles) {
+		String direccionEntrega, String telefonoContacto, List<DetallePedidoResponse> detalles) {
 }

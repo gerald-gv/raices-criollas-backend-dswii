@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.raicescriollas.auth.dto.ChangePasswordRequest;
+import com.raicescriollas.auth.dto.DireccionRequest;
 import com.raicescriollas.auth.dto.UpdatePerfilRequest;
 import com.raicescriollas.auth.dto.UsuarioResponse;
 import com.raicescriollas.auth.service.IPerfilService;
@@ -33,6 +34,11 @@ public class PerfilController {
     @PutMapping
     public ResponseEntity<ApiResponse<UsuarioResponse>> actualizar(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody UpdatePerfilRequest request) {
         return ResponseEntity.ok(new ApiResponse<>(true, "Perfil actualizado", perfilService.actualizar(userId(jwt), request)));
+    }
+
+    @PutMapping("/direccion")
+    public ResponseEntity<ApiResponse<UsuarioResponse>> actualizarDireccion(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody DireccionRequest request) {
+        return ResponseEntity.ok(new ApiResponse<>(true, "Dirección guardada", perfilService.actualizarDireccion(userId(jwt), request)));
     }
 
     @PutMapping("/password")

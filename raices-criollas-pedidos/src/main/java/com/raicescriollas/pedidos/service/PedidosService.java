@@ -1,5 +1,6 @@
 package com.raicescriollas.pedidos.service;
 
+import com.raicescriollas.pedidos.client.AuthClient;
 import com.raicescriollas.pedidos.client.PlatoClient;
 
 import com.raicescriollas.pedidos.dto.*;
@@ -37,13 +38,15 @@ public class PedidosService {
 	private final CarritoRepository carritos;
 	private final PedidoRepository pedidos;
 	private final PlatoClient menu;
+	private final AuthClient auth;
 	private final PedidoEventPublisher eventPublisher;
 
 	public PedidosService(CarritoRepository carritos, PedidoRepository pedidos, PlatoClient menu,
-			PedidoEventPublisher eventPublisher) {
+			AuthClient auth, PedidoEventPublisher eventPublisher) {
 		this.carritos = carritos;
 		this.pedidos = pedidos;
 		this.menu = menu;
+		this.auth = auth;
 		this.eventPublisher = eventPublisher;
 	}
 
@@ -188,6 +191,11 @@ public class PedidosService {
 			pedido.getDetalles().add(detalle);
 		}
 		pedido.setTotal(total);
+
+		// Direccion de entrega: se lee del perfil del cliente (no la manda el navegador) y se copia al pedido
+		copiarDireccion(pedido);
+
+		// Si no alcanza el stock, falla aqui (409 con el motivo) y no se crea ni se cancela nada
 		verificarStock(pedido);
 
 		// Si el cliente vuelve a continuar con lo mismo, se reutiliza el pedido pendiente (misma clave de pago en MP);
@@ -207,6 +215,29 @@ public class PedidosService {
 			return mapPedido(pedidos.save(reutilizable));
 		}
 		return mapPedido(pedidos.save(pedido));
+	}
+
+	// Lee la direccion del perfil con el JWT del cliente. Sin direccion o sin telefono no hay pedido
+	private void copiarDireccion(Pedido pedido) {
+		AuthClient.PerfilData perfil;
+		try {
+			AuthClient.PerfilResponse r = auth.perfil(SecurityUtils.getCurrentBearer());
+			perfil = r == null ? null : r.data();
+		} catch (FeignException e) {
+			throw new IllegalStateException("No se pudo verificar tu dirección de entrega. Inténtalo de nuevo.");
+		}
+		if (perfil == null || vacio(perfil.direccion()) || vacio(perfil.distrito()) || vacio(perfil.telefono()))
+			throw new IllegalArgumentException("Registra tu dirección de entrega y un teléfono de contacto para continuar.");
+
+		StringBuilder direccion = new StringBuilder(perfil.direccion().trim()).append(", ").append(perfil.distrito().trim());
+		if (!vacio(perfil.referencia()))
+			direccion.append(" (Ref: ").append(perfil.referencia().trim()).append(")");
+		pedido.setDireccionEntrega(direccion.toString());
+		pedido.setTelefonoContacto(perfil.telefono().trim());
+	}
+
+	private boolean vacio(String valor) {
+		return valor == null || valor.isBlank();
 	}
 
 	// Para "Pagar ahora" en un pedido que quedo pendiente: revisa el stock de ESE pedido antes de ir a Mercado Pago
@@ -230,6 +261,10 @@ public class PedidosService {
 	}
 
 	private boolean mismoContenido(Pedido a, Pedido b) {
+		// Otra direccion o telefono = otro pedido (no se reutiliza uno con la direccion vieja)
+		if (!java.util.Objects.equals(a.getDireccionEntrega(), b.getDireccionEntrega())
+				|| !java.util.Objects.equals(a.getTelefonoContacto(), b.getTelefonoContacto()))
+			return false;
 		if (a.getDetalles().size() != b.getDetalles().size())
 			return false;
 		for (DetallePedido da : a.getDetalles()) {
@@ -306,10 +341,7 @@ public class PedidosService {
 		pedido.setEstado(nuevo.name());
 		Pedido guardado = pedidos.save(pedido);
 
-		// Si se cancela un pedido ya pagado, publica el evento para que menu-service reponga el stock
-		if (nuevo == EstadoPedido.CANCELADO && actual != EstadoPedido.PENDIENTE_PAGO) {
-			eventPublisher.publicarPedidoCanceladoPagado(guardado);
-		}
+		
 		return mapPedido(guardado);
 	}
 
@@ -422,7 +454,7 @@ public class PedidosService {
 		for (DetallePedido d : p.getDetalles())
 			detalles.add(new DetallePedidoResponse(d.getPlatoId(), d.getNombrePlato(), d.getCantidad(),
 					d.getPrecioUnitario(), d.getSubtotal()));
-		return new PedidoResponse(p.getId(), p.getClienteId(), p.getFecha(), p.getEstado(), p.getTotal(), detalles);
+		return new PedidoResponse(p.getId(), p.getClienteId(), p.getFecha(), p.getEstado(), p.getTotal(),
+				p.getDireccionEntrega(), p.getTelefonoContacto(), detalles);
 	}
 }
-
