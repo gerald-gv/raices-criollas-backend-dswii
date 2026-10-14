@@ -1,9 +1,6 @@
 -- Raíces Criollas - esquema y datos iniciales del microservicio Auth
 -- Base de datos destino: auth_db
 --
--- Ejecutar este script conectado a auth_db ANTES de iniciar Auth.
--- Después, configurar spring.jpa.hibernate.ddl-auto=validate.
---
 -- Credenciales de demostración:
 -- Administradores: admin123
 -- Cliente:         12345678

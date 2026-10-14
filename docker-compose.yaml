@@ -1,0 +1,69 @@
+
+services:
+  postgres-auth:
+    image: postgres:18
+    container_name: raices-criollas-postgres-auth
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD en .env}
+    ports:
+      - "5433:5432"
+    volumes:
+      - auth_postgres_data:/var/lib/postgresql
+      - ./dbInit/auth_db.sql:/docker-entrypoint-initdb.d/01-auth.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  eureka:
+    build:
+      context: ./raices-criollas-eureka
+      dockerfile: Dockerfile
+    container_name: raices-criollas-eureka
+    restart: unless-stopped
+    ports:
+      - "8761:8761"
+
+  auth:
+    build:
+      context: ./raices-criollas-auth
+      dockerfile: Dockerfile
+    container_name: raices-criollas-auth
+    restart: unless-stopped
+    environment:
+      DB_URL: jdbc:postgresql://postgres-auth:5432/auth_db
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      INTERNAL_SECRET: ${INTERNAL_SECRET}
+      EUREKA_URL: http://eureka:8761/eureka
+      EUREKA_HOSTNAME: raices-criollas-auth
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres-auth:
+        condition: service_healthy
+      eureka:
+        condition: service_started
+
+  gateway:
+    build:
+      context: ./raices-criollas-gateway
+      dockerfile: Dockerfile
+    container_name: raices-criollas-gateway
+    restart: unless-stopped
+    environment:
+      EUREKA_URL: http://eureka:8761/eureka
+      EUREKA_HOSTNAME: raices-criollas-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - eureka
+      - auth
+
+volumes:
+  auth_postgres_data:
