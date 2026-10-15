@@ -175,9 +175,47 @@ services:
       eureka:
         condition: service_started
 
+  postgres-reservas:
+    image: postgres:18
+    container_name: raices-criollas-postgres-reservas
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: reservas_db
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD en .env}
+    volumes:
+      - reservas_postgres_data:/var/lib/postgresql
+      - ./dbInit/reservas_db.sql:/docker-entrypoint-initdb.d/01-reservas.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  reservas:
+    build:
+      context: ./raices-criollas-reservas
+      dockerfile: Dockerfile
+    container_name: raices-criollas-reservas
+    restart: unless-stopped
+    environment:
+      DB_URL: jdbc:postgresql://postgres-reservas:5432/reservas_db
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD}
+      EUREKA_URL: http://eureka:8761/eureka
+      EUREKA_HOSTNAME: raices-criollas-reservas
+      JWT_SECRET: ${JWT_SECRET:?Define JWT_SECRET en .env}
+      INTERNAL_SECRET: ${INTERNAL_SECRET:?Define INTERNAL_SECRET en .env}
+    depends_on:
+      postgres-reservas:
+        condition: service_healthy
+      eureka:
+        condition: service_started
+
 
 volumes:
   auth_postgres_data:
   menu_postgres_data:
   rabbitmq_data:
   pedidos_postgres_data:
+  reservas_postgres_data:
