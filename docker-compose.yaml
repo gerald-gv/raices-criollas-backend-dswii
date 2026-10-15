@@ -19,6 +19,74 @@ services:
       timeout: 5s
       retries: 10
 
+  postgres-menu:
+    image: postgres:18
+    container_name: raices-criollas-postgres-menu
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: menu_db
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD en .env}
+    ports:
+      - "5434:5432"
+    volumes:
+      - menu_postgres_data:/var/lib/postgresql
+      - ./dbInit/menu_db.sql:/docker-entrypoint-initdb.d/01-menu.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: raices-criollas-rabbitmq
+    hostname: rabbit-host
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-raices_user}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Define RABBITMQ_PASSWORD en .env}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  menu:
+    build:
+      context: ./raices-criollas-menu
+      dockerfile: Dockerfile
+    container_name: raices-criollas-menu
+    restart: unless-stopped
+    environment:
+      DB_URL: jdbc:postgresql://postgres-menu:5432/menu_db
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD}
+      EUREKA_URL: http://eureka:8761/eureka
+      EUREKA_HOSTNAME: raices-criollas-menu
+      JWT_SECRET: ${JWT_SECRET}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:-raices_user}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres-menu:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      eureka:
+        condition: service_started
+
   eureka:
     build:
       context: ./raices-criollas-eureka
@@ -67,3 +135,5 @@ services:
 
 volumes:
   auth_postgres_data:
+  menu_postgres_data:
+  rabbitmq_data:
