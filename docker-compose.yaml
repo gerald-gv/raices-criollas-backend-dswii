@@ -133,7 +133,51 @@ services:
       - eureka
       - auth
 
+  postgres-pedidos:
+    image: postgres:18
+    container_name: raices-criollas-postgres-pedidos
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pedidos_db
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pedidos_postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  pedidos:
+    build:
+      context: ./raices-criollas-pedidos
+      dockerfile: Dockerfile
+    container_name: raices-criollas-pedidos
+    restart: unless-stopped
+    environment:
+      DB_URL: jdbc:postgresql://postgres-pedidos:5432/pedidos_db
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD}
+      EUREKA_URL: http://eureka:8761/eureka
+      EUREKA_HOSTNAME: raices-criollas-pedidos
+      JWT_SECRET: ${JWT_SECRET}
+      INTERNAL_SECRET: ${INTERNAL_SECRET}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:-raices_user}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+    depends_on:
+      postgres-pedidos:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      eureka:
+        condition: service_started
+
+
 volumes:
   auth_postgres_data:
   menu_postgres_data:
   rabbitmq_data:
+  pedidos_postgres_data:
