@@ -1,3 +1,10 @@
+x-tz-java: &tz-java
+  TZ: America/Lima
+  JAVA_TOOL_OPTIONS: -Duser.timezone=America/Lima
+
+x-tz-postgres: &tz-postgres
+  TZ: America/Lima
+  PGTZ: America/Lima
 
 services:
   postgres-auth:
@@ -5,6 +12,7 @@ services:
     container_name: raices-criollas-postgres-auth
     restart: unless-stopped
     environment:
+      <<: *tz-postgres
       POSTGRES_DB: auth_db
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD en .env}
@@ -24,6 +32,7 @@ services:
     container_name: raices-criollas-postgres-menu
     restart: unless-stopped
     environment:
+      <<: *tz-postgres
       POSTGRES_DB: menu_db
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD en .env}
@@ -44,6 +53,7 @@ services:
     hostname: rabbit-host
     restart: unless-stopped
     environment:
+      TZ: America/Lima
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-raices_user}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Define RABBITMQ_PASSWORD en .env}
     ports:
@@ -64,6 +74,7 @@ services:
     container_name: raices-criollas-menu
     restart: unless-stopped
     environment:
+      <<: *tz-java
       DB_URL: jdbc:postgresql://postgres-menu:5432/menu_db
       DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -77,8 +88,6 @@ services:
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
       CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
       CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
-    ports:
-      - "8082:8082"
     depends_on:
       postgres-menu:
         condition: service_healthy
@@ -93,6 +102,8 @@ services:
       dockerfile: Dockerfile
     container_name: raices-criollas-eureka
     restart: unless-stopped
+    environment:
+      <<: *tz-java
     ports:
       - "8761:8761"
 
@@ -103,6 +114,7 @@ services:
     container_name: raices-criollas-auth
     restart: unless-stopped
     environment:
+      <<: *tz-java
       DB_URL: jdbc:postgresql://postgres-auth:5432/auth_db
       DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -110,8 +122,6 @@ services:
       INTERNAL_SECRET: ${INTERNAL_SECRET}
       EUREKA_URL: http://eureka:8761/eureka
       EUREKA_HOSTNAME: raices-criollas-auth
-    ports:
-      - "8081:8081"
     depends_on:
       postgres-auth:
         condition: service_healthy
@@ -125,6 +135,7 @@ services:
     container_name: raices-criollas-gateway
     restart: unless-stopped
     environment:
+      <<: *tz-java
       EUREKA_URL: http://eureka:8761/eureka
       EUREKA_HOSTNAME: raices-criollas-gateway
     ports:
@@ -138,6 +149,7 @@ services:
     container_name: raices-criollas-postgres-pedidos
     restart: unless-stopped
     environment:
+      <<: *tz-postgres
       POSTGRES_DB: pedidos_db
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -156,6 +168,7 @@ services:
     container_name: raices-criollas-pedidos
     restart: unless-stopped
     environment:
+      <<: *tz-java
       DB_URL: jdbc:postgresql://postgres-pedidos:5432/pedidos_db
       DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -180,11 +193,10 @@ services:
     container_name: raices-criollas-postgres-reservas
     restart: unless-stopped
     environment:
+      <<: *tz-postgres
       POSTGRES_DB: reservas_db
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD en .env}
-      TZ: America/Lima
-      PGTZ: America/Lima
     volumes:
       - reservas_postgres_data:/var/lib/postgresql
       - ./dbInit/reservas_db.sql:/docker-entrypoint-initdb.d/01-reservas.sql:ro
@@ -201,6 +213,7 @@ services:
     container_name: raices-criollas-reservas
     restart: unless-stopped
     environment:
+      <<: *tz-java
       DB_URL: jdbc:postgresql://postgres-reservas:5432/reservas_db
       DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -208,7 +221,6 @@ services:
       EUREKA_HOSTNAME: raices-criollas-reservas
       JWT_SECRET: ${JWT_SECRET:?Define JWT_SECRET en .env}
       INTERNAL_SECRET: ${INTERNAL_SECRET:?Define INTERNAL_SECRET en .env}
-      TZ: America/Lima
     depends_on:
       postgres-reservas:
         condition: service_healthy
