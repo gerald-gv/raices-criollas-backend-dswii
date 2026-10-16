@@ -1,11 +1,14 @@
 package com.raicescriollas.reservas.service.impl;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.raicescriollas.reservas.config.DateTimeConfig;
 import com.raicescriollas.reservas.dto.MesaRequestDTO;
 import com.raicescriollas.reservas.dto.MesaResponseDTO;
 import com.raicescriollas.reservas.entity.Mesa;
@@ -14,13 +17,21 @@ import com.raicescriollas.reservas.exception.ResourceNotFoundException;
 import com.raicescriollas.reservas.repository.MesaRepository;
 import com.raicescriollas.reservas.service.IMesaService;
 
-import lombok.RequiredArgsConstructor;
-
 @Service
-@RequiredArgsConstructor
 public class MesaServiceImpl implements IMesaService {
 
     private final MesaRepository mesaRepository;
+    private final Clock clock;
+
+    @Autowired
+    public MesaServiceImpl(MesaRepository mesaRepository, Clock clock) {
+        this.mesaRepository = mesaRepository;
+        this.clock = clock != null ? clock : Clock.system(DateTimeConfig.ZONE_LIMA);
+    }
+
+    public MesaServiceImpl(MesaRepository mesaRepository) {
+        this(mesaRepository, Clock.system(DateTimeConfig.ZONE_LIMA));
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -31,14 +42,15 @@ public class MesaServiceImpl implements IMesaService {
         if (!fechaInicio.isBefore(fechaFin)) {
             throw new BusinessException("La fecha de inicio debe ser anterior a la fecha de finalización");
         }
-        if (fechaInicio.isBefore(LocalDateTime.now())) {
+
+        LocalDateTime ahora = LocalDateTime.now(clock);
+        if (fechaInicio.isBefore(ahora)) {
             throw new BusinessException("No se puede consultar disponibilidad en fechas u horas pasadas");
         }
         if (cantidadPersonas == null || cantidadPersonas <= 0) {
             throw new BusinessException("La cantidad de personas debe ser mayor que cero");
         }
 
-        LocalDateTime ahora = LocalDateTime.now();
         return mesaRepository.findMesasDisponibles(cantidadPersonas, fechaInicio, fechaFin, ahora)
                 .stream()
                 .map(this::toDTO)

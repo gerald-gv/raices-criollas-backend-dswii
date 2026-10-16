@@ -183,6 +183,8 @@ services:
       POSTGRES_DB: reservas_db
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD en .env}
+      TZ: America/Lima
+      PGTZ: America/Lima
     volumes:
       - reservas_postgres_data:/var/lib/postgresql
       - ./dbInit/reservas_db.sql:/docker-entrypoint-initdb.d/01-reservas.sql:ro
@@ -206,6 +208,7 @@ services:
       EUREKA_HOSTNAME: raices-criollas-reservas
       JWT_SECRET: ${JWT_SECRET:?Define JWT_SECRET en .env}
       INTERNAL_SECRET: ${INTERNAL_SECRET:?Define INTERNAL_SECRET en .env}
+      TZ: America/Lima
     depends_on:
       postgres-reservas:
         condition: service_healthy

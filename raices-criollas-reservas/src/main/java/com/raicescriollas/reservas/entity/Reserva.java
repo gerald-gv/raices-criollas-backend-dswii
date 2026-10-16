@@ -83,7 +83,7 @@ public class Reserva {
 
     @PrePersist
     public void prePersist() {
-        this.fechaCreacion = LocalDateTime.now();
+        this.fechaCreacion = LocalDateTime.now(com.raicescriollas.reservas.config.DateTimeConfig.ZONE_LIMA);
         if (this.estado == null) {
             this.estado = EstadoReserva.PENDIENTE;
         }
@@ -97,6 +97,6 @@ public class Reserva {
 
     @PreUpdate
     public void preUpdate() {
-        this.fechaActualizacion = LocalDateTime.now();
+        this.fechaActualizacion = LocalDateTime.now(com.raicescriollas.reservas.config.DateTimeConfig.ZONE_LIMA);
     }
 }
