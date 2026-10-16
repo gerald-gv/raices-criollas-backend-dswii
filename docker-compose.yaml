@@ -227,6 +227,45 @@ services:
       eureka:
         condition: service_started
 
+  postgres-payment:
+    image: postgres:18
+    container_name: raices-criollas-postgres-payment
+    restart: unless-stopped
+    environment:
+      <<: *tz-postgres
+      POSTGRES_DB: payment_db
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD en .env}
+    volumes:
+      - payment_postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  payment:
+    build:
+      context: ./raices-criollas-payment
+      dockerfile: Dockerfile
+    container_name: raices-criollas-payment
+    restart: unless-stopped
+    environment:
+      <<: *tz-java
+      DB_URL: jdbc:postgresql://postgres-payment:5432/payment_db
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      INTERNAL_SECRET: ${INTERNAL_SECRET}
+      MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN:?Define MP_ACCESS_TOKEN en .env}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      EUREKA_URL: http://eureka:8761/eureka
+      EUREKA_HOSTNAME: raices-criollas-payment
+    depends_on:
+      postgres-payment:
+        condition: service_healthy
+      eureka:
+        condition: service_started
 
 volumes:
   auth_postgres_data:
@@ -234,3 +273,4 @@ volumes:
   rabbitmq_data:
   pedidos_postgres_data:
   reservas_postgres_data:
+  payment_postgres_data:

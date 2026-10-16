@@ -2,6 +2,7 @@ package com.raicescriollas.payment.controller;
 
 import com.raicescriollas.payment.dto.CrearPagoRequest;
 import com.raicescriollas.payment.dto.PagoResponse;
+import com.raicescriollas.payment.service.INotificacionService;
 import com.raicescriollas.payment.service.IPagoService;
 import com.raicescriollas.payment.utils.ApiResponse;
 import jakarta.validation.Valid;
@@ -27,6 +28,7 @@ import java.util.List;
 public class PagoController {
 
     private final IPagoService pagoService;
+    private final INotificacionService notificacionService;
 
     @PostMapping
     public ResponseEntity<ApiResponse<PagoResponse>> crear(
@@ -59,6 +61,17 @@ public class PagoController {
         List<PagoResponse> pagos = pagoService.listarPorPedido(pedidoId, usuarioId(jwt));
 
         return ResponseEntity.ok(new ApiResponse<>(true, "Pagos del pedido", pagos));
+    }
+
+    @PostMapping("/{id}/sincronizar")
+    public ResponseEntity<ApiResponse<PagoResponse>> sincronizar(
+            @PathVariable Long id,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        pagoService.obtener(id, usuarioId(jwt));
+        notificacionService.sincronizar(id);
+        PagoResponse pago = pagoService.obtener(id, usuarioId(jwt));
+        return ResponseEntity.ok(new ApiResponse<>(true, "Pago sincronizado", pago));
     }
 
     private Long usuarioId(Jwt jwt) {

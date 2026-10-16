@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 
 @Slf4j
@@ -36,16 +37,36 @@ public class NotificacionServiceImpl implements INotificacionService {
         Long id;
         try {
             id = Long.valueOf(mpPaymentId);
-        } catch (NumberFormatException e ) {
+        } catch (NumberFormatException e) {
             log.warn("Aviso con id de pago invalido: {}", mpPaymentId);
             return;
         }
+        consultarYAplicar(id);
+    }
 
-        Optional<PagoMP> consulta = mercadoPagoService.consultarPago(id);
-        if (consulta.isEmpty() || consulta.get().status() == null) {
+    @Override
+    @Transactional
+    public void sincronizar(Long pagoId) {
+        Optional<Pago> pago = pagoRepository.findById(pagoId);
+        if (pago.isEmpty() || pago.get().getReferenciaExterna() == null) {
             return;
         }
 
+        String referencia = pago.get().getReferenciaExterna();
+        List<Long> idsMp = mercadoPagoService.buscarIdsDePagos(referencia);
+        log.debug("Sincronizando pago {}: Mercado Pago informa {} pago(s) con la referencia {}",
+                pagoId, idsMp.size(), referencia);
+
+        for (Long idMp : idsMp) {
+            consultarYAplicar(idMp);
+        }
+    }
+
+    private void consultarYAplicar(Long mpPaymentId) {
+        Optional<PagoMP> consulta = mercadoPagoService.consultarPago(mpPaymentId);
+        if (consulta.isEmpty() || consulta.get().status() == null) {
+            return;
+        }
         PagoMP mp = consulta.get();
 
         Optional<Pago> encontrado = buscarPago(mp.externalReference());
@@ -54,7 +75,6 @@ public class NotificacionServiceImpl implements INotificacionService {
                     mp.id(), mp.externalReference());
             return;
         }
-
         Pago pago = encontrado.get();
 
         if (pago.getMonto().compareTo(mp.monto()) != 0) {
@@ -93,11 +113,10 @@ public class NotificacionServiceImpl implements INotificacionService {
     }
 
     private Optional<Pago> buscarPago(String externalReference) {
-        try {
-            return pagoRepository.findById(Long.valueOf(externalReference));
-        } catch (NumberFormatException e) {
+        if (externalReference == null) {
             return Optional.empty();
         }
+        return pagoRepository.findByReferenciaExternaParaActualizar(externalReference);
     }
 
     private EstadoPago traducir(String statusMp) {
@@ -118,6 +137,7 @@ public class NotificacionServiceImpl implements INotificacionService {
             case CANCELADO, REEMBOLSADO -> false;
         };
     }
+
     private void avisarPedidoPagado(Pago pago) {
         try {
             try {

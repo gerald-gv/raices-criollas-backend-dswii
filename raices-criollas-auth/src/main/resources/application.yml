@@ -22,7 +22,7 @@ app:
     access-token-minutes: 120
     secret: "${JWT_SECRET}"
   internal:
-    secret: ${INTERNAL_SECRET:antiCibertec}
+    secret: ${INTERNAL_SECRET}
 
 eureka:
   instance:
