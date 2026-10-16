@@ -17,10 +17,14 @@ spring:
         "[format_sql]": true
 
 app:
+  sync:
+    activo: ${SYNC_ACTIVO:true}
+    intervalo-ms: ${SYNC_INTERVALO_MS:30000}
+    ventana-minutos: ${SYNC_VENTANA_MINUTOS:35}
   jwt:
     secret: "${JWT_SECRET}"
   internal:
-    secret: "${INTERNAL_SECRET:antiCibertec}"
+    secret: "${INTERNAL_SECRET}"
   mercadopago:
     access-token: "${MP_ACCESS_TOKEN}"
     frontend-url: "${FRONTEND_URL:http://localhost:3000}"

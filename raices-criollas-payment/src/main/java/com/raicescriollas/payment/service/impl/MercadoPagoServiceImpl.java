@@ -7,6 +7,8 @@ import com.mercadopago.client.preference.PreferenceItemRequest;
 import com.mercadopago.client.preference.PreferenceRequest;
 import com.mercadopago.exceptions.MPApiException;
 import com.mercadopago.exceptions.MPException;
+import com.mercadopago.net.MPResultsResourcesPage;
+import com.mercadopago.net.MPSearchRequest;
 import com.mercadopago.resources.payment.Payment;
 import com.mercadopago.resources.preference.Preference;
 import com.raicescriollas.payment.dto.PagoMP;
@@ -18,7 +20,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Slf4j
@@ -55,7 +59,7 @@ public class MercadoPagoServiceImpl implements IMercadoPagoService {
             PreferenceRequest request = PreferenceRequest.builder()
                     .items(List.of(item))
                     .backUrls(backUrls)
-                    .externalReference(String.valueOf(pago.getId()))
+                    .externalReference(pago.getReferenciaExterna())
                     .notificationUrl(notificationUrl)
                     .build();
 
@@ -96,6 +100,34 @@ public class MercadoPagoServiceImpl implements IMercadoPagoService {
             }
             log.error("Error al consultar el pago {}. Estado: {} - Respuesta: {}",
                     mpPaymentId, e.getStatusCode(), e.getApiResponse().getContent());
+            throw new PasarelaPagoException();
+        } catch (MPException e) {
+            log.error("Error al comunicarse con Mercado Pago", e);
+            throw new PasarelaPagoException();
+        }
+    }
+
+    @Override
+    public List<Long> buscarIdsDePagos(String externalReference) {
+        try {
+            Map<String, Object> filtros = new HashMap<>();
+            filtros.put("external_reference", externalReference);
+            filtros.put("sort", "date_created");
+            filtros.put("criteria", "asc");
+
+            MPSearchRequest busqueda = MPSearchRequest.builder()
+                    .offset(0)
+                    .limit(30)
+                    .filters(filtros)
+                    .build();
+
+            MPResultsResourcesPage<Payment> pagina = new PaymentClient().search(busqueda);
+
+            return pagina.getResults().stream().map(Payment::getId).toList();
+
+        } catch (MPApiException e) {
+            log.error("Error al buscar pagos con la referencia {}. Estado: {} - Respuesta: {}",
+                    externalReference, e.getStatusCode(), e.getApiResponse().getContent());
             throw new PasarelaPagoException();
         } catch (MPException e) {
             log.error("Error al comunicarse con Mercado Pago", e);

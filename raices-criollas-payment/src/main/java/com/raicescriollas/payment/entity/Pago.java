@@ -17,6 +17,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Table(name = "pagos", indexes = @Index(name = "idx_pagos_pedido_id", columnList = "pedido_id"))
@@ -55,6 +56,10 @@ public class Pago {
 
     @Column(name = "url_pago", length = 500)
     private String urlPago;
+
+    @Column(name = "referencia_externa", unique = true, length = 36)
+    @Builder.Default
+    private String referenciaExterna = UUID.randomUUID().toString();
 
     @Column(name = "idempotency_key", nullable = false, unique = true, length = 100)
     private String idempotencyKey;
