@@ -21,6 +21,9 @@ app:
     activo: ${SYNC_ACTIVO:true}
     intervalo-ms: ${SYNC_INTERVALO_MS:30000}
     ventana-minutos: ${SYNC_VENTANA_MINUTOS:35}
+  pedidos:
+    vigencia-minutos: ${PEDIDO_VIGENCIA_MINUTOS:3}
+    zona-horaria: ${PEDIDO_ZONA_HORARIA:America/Lima}
   jwt:
     secret: "${JWT_SECRET}"
   internal:

@@ -29,6 +29,7 @@ public class SecurityConfig {
         http.csrf(csrf -> csrf.disable())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(a -> a
+                .requestMatchers(HttpMethod.PUT, "/reservas/interno/**").hasAuthority("ROLE_SERVICE")
                 // Consulta pública de mesas disponibles y cotización previa
                 .requestMatchers(HttpMethod.GET, "/mesas/disponibles").permitAll()
                 .requestMatchers(HttpMethod.POST, "/reservas/cotizar").permitAll()

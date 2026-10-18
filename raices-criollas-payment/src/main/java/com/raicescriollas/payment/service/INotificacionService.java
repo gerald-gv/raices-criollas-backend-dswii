@@ -6,4 +6,6 @@ public interface INotificacionService {
     void procesarPago(String mpPaymentId);
 
     void sincronizar(Long pagoId);
+
+    void expirarSiVencido(Long pagoId);
 }

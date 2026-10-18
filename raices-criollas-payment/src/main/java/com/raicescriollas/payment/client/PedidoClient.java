@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @FeignClient(name = "raices-criollas-pedidos")
 public interface PedidoClient {
@@ -22,7 +23,7 @@ public interface PedidoClient {
     record PedidoApiResponse(boolean success, String mensaje, PedidoData data) {
     }
 
-    record PedidoData(Long id, Long clienteId, String estado, BigDecimal total) {
+    record PedidoData(Long id, Long clienteId, LocalDateTime fecha, String estado, BigDecimal total) {
     }
 
 }

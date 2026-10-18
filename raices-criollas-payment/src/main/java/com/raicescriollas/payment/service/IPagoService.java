@@ -9,4 +9,6 @@ public interface IPagoService {
     PagoResponse crear(CrearPagoRequest request, Long usuarioId, String idempotencyKey, String authorization);
     PagoResponse obtener(Long id, Long usuarioId);
     List<PagoResponse> listarPorPedido(Long pedidoId, Long usuarioId);
+    PagoResponse reembolsar(Long id);
+    List<PagoResponse> listarPorReserva(Long reservaId, Long usuarioId);
 }

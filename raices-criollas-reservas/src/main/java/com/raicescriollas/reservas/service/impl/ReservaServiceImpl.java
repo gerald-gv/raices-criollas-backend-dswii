@@ -264,6 +264,43 @@ public class ReservaServiceImpl implements IReservaService {
 
     @Override
     @Transactional
+    public ReservaResponseDTO marcarPagada(Long id) {
+        Reserva reserva = reservaRepository.findByIdParaActualizar(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Reserva no encontrada con ID: " + id));
+
+        // Idempotente: si ya esta pagada y confirmada, se devuelve tal cual
+        if (reserva.getEstado() == EstadoReserva.CONFIRMADA
+                && reserva.getEstadoPago() == EstadoPago.PAGADO) {
+            return toDTO(reserva);
+        }
+
+        if (reserva.getEstado() != EstadoReserva.PENDIENTE
+                || reserva.getEstadoPago() != EstadoPago.PENDIENTE) {
+            throw new BusinessException("La reserva no admite pago en su estado actual");
+        }
+
+        LocalDateTime ahora = LocalDateTime.now(clock);
+
+        // Pago tardio: solo se acepta si la mesa sigue libre en ese horario
+        if (reserva.getFechaExpiracionPago() != null && reserva.getFechaExpiracionPago().isBefore(ahora)) {
+            boolean ocupada = reservaRepository.existsOverlappingReservations(
+                    reserva.getMesa().getId(),
+                    reserva.getFechaInicio(),
+                    reserva.getFechaFin(),
+                    ahora,
+                    reserva.getId());
+            if (ocupada) {
+                throw new BusinessException("La reserva expiro y la mesa ya fue tomada por otra reserva");
+            }
+        }
+
+        reserva.setEstado(EstadoReserva.CONFIRMADA);
+        reserva.setEstadoPago(EstadoPago.PAGADO);
+        return toDTO(reservaRepository.save(reserva));
+    }
+
+    @Override
+    @Transactional
     public ReservaResponseDTO cambiarEstado(Long id, EstadoReserva nuevoEstado) {
         return cambiarEstado(id, nuevoEstado, null);
     }

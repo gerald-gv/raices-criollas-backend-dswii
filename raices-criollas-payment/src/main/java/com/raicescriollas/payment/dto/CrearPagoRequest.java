@@ -5,7 +5,14 @@ import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
 
+import jakarta.validation.constraints.AssertTrue;
+
 public record CrearPagoRequest(
-        @NotNull(message = "El pedido es obligatorio") Long pedidoId
+        Long pedidoId,
+        Long reservaId
 ) {
+    @AssertTrue(message = "Indica pedidoId o reservaId, pero solo uno")
+    public boolean isUnSoloOrigen() {
+        return (pedidoId != null) ^ (reservaId != null);
+    }
 }

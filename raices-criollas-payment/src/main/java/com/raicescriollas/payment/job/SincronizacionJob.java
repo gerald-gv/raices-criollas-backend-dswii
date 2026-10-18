@@ -27,6 +27,9 @@ public class SincronizacionJob {
     @Value("${app.sync.ventana-minutos:35}")
     private long ventanaMinutos;
 
+    @Value("${app.sync.gracia-minutos:2}")
+    private long graciaMinutos;
+
     @Scheduled(fixedDelayString = "${app.sync.intervalo-ms:30000}",
             initialDelayString = "${app.sync.intervalo-ms:30000}")
     public void sincronizarPendientes() {
@@ -44,6 +47,16 @@ public class SincronizacionJob {
                 notificacionService.sincronizar(pago.getId());
             } catch (Exception e) {
                 log.warn("No se pudo sincronizar el pago {}: {}", pago.getId(), e.getMessage());
+            }
+        }
+
+        Instant limite = Instant.now().minus(graciaMinutos, ChronoUnit.MINUTES);
+
+        for (Pago pago : pagoRepository.findByEstadoAndVenceEnBefore(EstadoPago.PENDIENTE, limite)) {
+            try {
+                notificacionService.expirarSiVencido(pago.getId());
+            } catch (Exception e) {
+                log.warn("No se pudo expirar el pago {}: {}", pago.getId(), e.getMessage());
             }
         }
     }

@@ -29,4 +29,6 @@ public interface IReservaService {
     ReservaResponseDTO cambiarEstado(Long id, EstadoReserva nuevoEstado, EstadoPago nuevoEstadoPago);
 
     ReservaResponseDTO cambiarEstado(Long id, EstadoReserva nuevoEstado);
+
+    ReservaResponseDTO marcarPagada(Long id);
 }
