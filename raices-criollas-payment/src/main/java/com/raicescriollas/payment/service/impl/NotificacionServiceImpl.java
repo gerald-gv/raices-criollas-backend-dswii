@@ -1,9 +1,11 @@
 package com.raicescriollas.payment.service.impl;
 
 import com.raicescriollas.payment.client.PedidoClient;
+import com.raicescriollas.payment.client.ReservaClient;
 import com.raicescriollas.payment.dto.PagoMP;
 import com.raicescriollas.payment.entity.EstadoPago;
 import com.raicescriollas.payment.entity.Pago;
+import com.raicescriollas.payment.entity.TipoOrigen;
 import com.raicescriollas.payment.entity.TipoTransaccion;
 import com.raicescriollas.payment.entity.TransaccionPago;
 import com.raicescriollas.payment.exception.ServicioNoDisponibleException;
@@ -29,6 +31,7 @@ public class NotificacionServiceImpl implements INotificacionService {
     private final PagoRepository pagoRepository;
     private final TransaccionPagoRepository transaccionRepository;
     private final PedidoClient pedidoClient;
+    private final ReservaClient reservaClient;
     private final ServiceTokenProvider serviceTokens;
 
     @Override
@@ -60,6 +63,36 @@ public class NotificacionServiceImpl implements INotificacionService {
         for (Long idMp : idsMp) {
             consultarYAplicar(idMp);
         }
+    }
+
+    @Override
+    @Transactional
+    public void expirarSiVencido(Long pagoId) {
+        Optional<Pago> encontrado = pagoRepository.findByIdParaActualizar(pagoId);
+        if (encontrado.isEmpty()) {
+            return;
+        }
+        Pago pago = encontrado.get();
+
+        if (pago.getEstado() != EstadoPago.PENDIENTE
+                || pago.getVenceEn() == null
+                || pago.getVenceEn().isAfter(java.time.Instant.now())) {
+            return;
+        }
+
+        List<Long> idsMp = mercadoPagoService.buscarIdsDePagos(pago.getReferenciaExterna());
+
+        if (!idsMp.isEmpty()) {
+            // Hay pagos en Mercado Pago: se aplica su resultado y NO se cancela
+            for (Long idMp : idsMp) {
+                consultarYAplicar(idMp);
+            }
+            return;
+        }
+
+        pago.setEstado(EstadoPago.CANCELADO);
+        pagoRepository.save(pago);
+        log.info("Pago {} vencido sin pagos en Mercado Pago: pasa a CANCELADO", pago.getId());
     }
 
     private void consultarYAplicar(Long mpPaymentId) {
@@ -100,7 +133,7 @@ public class NotificacionServiceImpl implements INotificacionService {
 
         if (transicionValida(pago.getEstado(), nuevo)) {
             if (nuevo == EstadoPago.APROBADO) {
-                avisarPedidoPagado(pago);
+                avisarOrigenPagado(pago);
             }
             pago.setEstado(nuevo);
             pago.setMpPaymentId(mp.id());
@@ -138,20 +171,31 @@ public class NotificacionServiceImpl implements INotificacionService {
         };
     }
 
-    private void avisarPedidoPagado(Pago pago) {
+    private void notificarMarcarPagado(Pago pago, String bearer) {
+        if (pago.getTipo() == TipoOrigen.RESERVA) {
+            reservaClient.marcarPagada(pago.getReservaId(), bearer);
+        } else {
+            pedidoClient.marcarPagado(pago.getPedidoId(), bearer);
+        }
+    }
+
+    private void avisarOrigenPagado(Pago pago) {
+        boolean esReserva = pago.getTipo() == TipoOrigen.RESERVA;
+        String origen = esReserva ? "Reservas" : "Pedidos";
+        Long origenId = esReserva ? pago.getReservaId() : pago.getPedidoId();
+
         try {
             try {
-                pedidoClient.marcarPagado(pago.getPedidoId(), serviceTokens.bearer());
+                notificarMarcarPagado(pago, serviceTokens.bearer());
             } catch (FeignException.Unauthorized e) {
                 serviceTokens.invalidar();
-                pedidoClient.marcarPagado(pago.getPedidoId(), serviceTokens.bearer());
+                notificarMarcarPagado(pago, serviceTokens.bearer());
             }
         } catch (FeignException.Conflict | FeignException.NotFound e) {
-            log.error("REVISION MANUAL: el pago {} fue aprobado pero Pedidos no pudo marcar el pedido {} como pagado (estado {})",
-                    pago.getId(), pago.getPedidoId(), e.status());
+            log.error("REVISION MANUAL: el pago {} fue aprobado pero {} no pudo marcar {} {} como pagado (estado {})",
+                    pago.getId(), origen, esReserva ? "la reserva" : "el pedido", origenId, e.status());
         } catch (FeignException e) {
-            log.error("Pedidos no respondio al aviso de pago del pedido {}. Estado: {}",
-                    pago.getPedidoId(), e.status());
+            log.error("{} no respondio al aviso de pago de {}. Estado: {}", origen, origenId, e.status());
             throw new ServicioNoDisponibleException();
         }
     }

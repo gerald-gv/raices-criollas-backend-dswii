@@ -60,4 +60,14 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<?>> handleServicioNoDisponible(ServicioNoDisponibleException ex) {
         return new ResponseEntity<>(new ApiResponse<>(false, ex.getMessage(), null), HttpStatus.SERVICE_UNAVAILABLE);
     }
+
+    @ExceptionHandler(PagoNoReembolsableException.class)
+    public ResponseEntity<ApiResponse<?>> handleNoReembolsable(PagoNoReembolsableException ex) {
+        return new ResponseEntity<>(new ApiResponse<>(false, ex.getMessage(), null), HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(ReservaNotFoundException.class)
+    public ResponseEntity<ApiResponse<?>> handleReservaNotFound(ReservaNotFoundException ex) {
+        return new ResponseEntity<>(new ApiResponse<>(false, ex.getMessage(), null), HttpStatus.NOT_FOUND);
+    }
 }

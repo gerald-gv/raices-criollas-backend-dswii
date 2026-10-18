@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -105,5 +106,12 @@ public class ReservaController {
     ) {
         ReservaResponseDTO reserva = reservaService.cambiarEstado(id, dto.getEstado(), dto.getEstadoPago());
         return ResponseEntity.ok(new ApiResponse<>(true, "Estado de la reserva actualizado exitosamente", reserva));
+    }
+
+    // Endpoint interno: solo lo usa el microservicio de Pagos (ROLE_SERVICE)
+    @PutMapping("/interno/{id}/pagado")
+    public ResponseEntity<ApiResponse<ReservaResponseDTO>> marcarPagada(@PathVariable Long id) {
+        ReservaResponseDTO reserva = reservaService.marcarPagada(id);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Reserva marcada como pagada", reserva));
     }
 }

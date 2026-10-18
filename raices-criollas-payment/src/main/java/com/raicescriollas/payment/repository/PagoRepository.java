@@ -29,4 +29,20 @@ public interface PagoRepository extends JpaRepository<Pago, Long> {
     Optional<Pago> findByReferenciaExternaParaActualizar(@Param("ref") String ref);
 
     List<Pago> findByEstadoInAndCreadoEnAfter(Collection<EstadoPago> estados, Instant desde);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select p from Pago p where p.id = :id")
+    Optional<Pago> findByIdParaActualizar(@Param("id") Long id);
+
+    List<Pago> findByEstadoAndVenceEnBefore(EstadoPago estado, Instant limite);
+
+    Optional<Pago> findFirstByPedidoIdAndUsuarioIdAndEstadoOrderByCreadoEnDesc(
+            Long pedidoId, Long usuarioId, EstadoPago estado);
+
+    List<Pago> findByReservaIdAndUsuarioId(Long reservaId, Long usuarioId);
+
+    boolean existsByReservaIdAndEstado(Long reservaId, EstadoPago estado);
+
+    Optional<Pago> findFirstByReservaIdAndUsuarioIdAndEstadoOrderByCreadoEnDesc(
+            Long reservaId, Long usuarioId, EstadoPago estado);
 }
