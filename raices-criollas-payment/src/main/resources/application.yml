@@ -22,7 +22,7 @@ app:
     intervalo-ms: ${SYNC_INTERVALO_MS:30000}
     ventana-minutos: ${SYNC_VENTANA_MINUTOS:35}
   pedidos:
-    vigencia-minutos: ${PEDIDO_VIGENCIA_MINUTOS:3}
+    vigencia-minutos: ${PEDIDO_VIGENCIA_MINUTOS:30}
     zona-horaria: ${PEDIDO_ZONA_HORARIA:America/Lima}
   jwt:
     secret: "${JWT_SECRET}"
