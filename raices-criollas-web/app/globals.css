@@ -1,0 +1,405 @@
+@import "tailwindcss";
+
+
+:root {
+  --ink: #26251f;
+  --muted: #706c61;
+  --cream: #fbf8f0;
+  --paper: #fffdf8;
+  --yellow: #f2bd22;
+  --gold: #d99a0b;
+  --terracotta: #b95836;
+  --line: #e8e0cf;
+  --olive: #5b6b2f;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--cream);
+  color: var(--ink);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.button-primary {
+  background: var(--ink);
+  color: white;
+}
+
+.button-primary:hover {
+  background: var(--terracotta);
+}
+
+.button-outline {
+  background: transparent;
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.button-danger {
+  background: transparent;
+  border-color: var(--terracotta);
+  color: var(--terracotta);
+}
+
+.button-danger:hover {
+  background: var(--terracotta);
+  color: white;
+}
+
+.button-text {
+  background: transparent;
+  color: var(--terracotta);
+  padding-left: 0;
+}
+
+.brand-mark {
+  background: var(--yellow);
+  color: var(--ink);
+}
+
+.announcement-link {
+  border-left: 1px solid #9e7810;
+}
+
+.nav-open {
+  position: absolute;
+  top: 70px;
+  right: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  background: var(--paper);
+  padding: 25px;
+  border-top: 1px solid var(--line);
+  box-shadow: 0 14px 20px rgba(0, 0, 0, 0.08);
+}
+
+.hero-image {
+  transform: rotate(2.4deg);
+}
+
+.hero-image::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: linear-gradient(0deg,
+      rgba(28, 25, 17, 0.52),
+      transparent 45%);
+}
+
+.featured-section {
+  background: var(--paper);
+  padding: 95px clamp(24px, 8vw, 128px);
+}
+
+.dish-card {
+  transition: box-shadow 200ms ease;
+}
+
+.dish-card:hover {
+  box-shadow: 0 14px 30px rgba(38, 37, 31, 0.08);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes backdropIn {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0);
+  }
+
+  to {
+    opacity: 1;
+    backdrop-filter: blur(4px);
+  }
+}
+
+.modal {
+  box-shadow: 0 24px 60px -20px rgb(0 0 0 / 0.35);
+}
+
+.modal[open] {
+  animation: modalIn 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.modal::backdrop {
+  background: color-mix(in srgb, var(--ink) 60%, transparent);
+  backdrop-filter: blur(4px);
+}
+
+.modal[open]::backdrop {
+  animation: backdropIn 220ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .modal[open],
+  .modal[open]::backdrop {
+    animation: none;
+  }
+}
+
+/* ===== Reservas y mesas ===== */
+.reserva-badge {
+  letter-spacing: 0.08em;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.toast {
+  animation: toast-enter 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.toast--exit {
+  pointer-events: none;
+  animation: toast-exit 350ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.toast__progress-bar {
+  animation: toast-progress 3s linear both;
+}
+
+@keyframes toast-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(32px, -12px, 0) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes toast-exit {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    max-height: 160px;
+    margin-bottom: 0;
+  }
+
+  to {
+    opacity: 0;
+    transform: translate3d(0, -24px, 0) scale(0.97);
+    max-height: 0;
+    margin-bottom: -12px;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-top-width: 0;
+    border-bottom-width: 0;
+  }
+}
+
+@keyframes toast-progress {
+  from {
+    transform: scaleX(1);
+  }
+
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .toast,
+  .toast--exit,
+  .toast__progress-bar {
+    animation: none;
+  }
+
+  .toast--exit {
+    opacity: 0;
+  }
+}
+
+
+
+/* ===== DishCard: icono del botón "Añadir al pedido" (el resto del botón es Tailwind) ===== */
+.dish-card__cart svg {
+  transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.dish-card__cart:hover svg {
+  transform: rotate(-10deg) scale(1.15);
+}
+
+/* ===== Slider infinito de recomendados ===== */
+/* Nada de arrastrar las imágenes mientras se desliza (el texto se bloquea con select-none en el componente) */
+.featured-slider img {
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
+/* Desplazamiento: --idx lo pone el componente y --pv (platos a la vista) las clases del track */
+.slider-track {
+  transform: translateX(calc(var(--idx, 0) * -100% / var(--pv)));
+  transition: transform 500ms cubic-bezier(0.22, 0.8, 0.24, 1);
+}
+
+/* Salto invisible de un clon a su plato real */
+.slider-track--instant {
+  transition: none;
+}
+
+/* Sin slider (pocos platos) */
+.slider-track--static {
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .slider-track,
+  .dish-card__cart svg {
+    transition: none;
+  }
+}
+
+
+.stock-notice--agotado {
+  --stock-caja: border-color;
+  border-color: rgb(185 88 54 / 25%);
+  background: #f8e9e2;
+  --stock-icono: var(--terracotta);
+  --stock-pill-bg: #f3e0d7;
+  --stock-pill-color: var(--terracotta);
+}
+
+.stock-notice--aumenta {
+  border-color: rgb(91 107 47 / 25%);
+  background: #eef1e3;
+  --stock-icono: var(--olive);
+  --stock-pill-bg: #dfe6c9;
+  --stock-pill-color: var(--olive);
+}
+
+.stock-notice--disminuye {
+  border-color: rgb(217 154 11 / 35%);
+  background: #fef8e7;
+  --stock-icono: #9a6a05;
+  --stock-pill-bg: #fbeac0;
+  --stock-pill-color: #89600b;
+}
+
+.stock-noticeicon {
+  color: var(--stock-icono);
+}
+
+.stock-noticepill {
+  background: var(--stock-pill-bg);
+  color: var(--stock-pill-color);
+}
+
+@keyframes rc-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes rc-float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes rc-steam {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scaleX(1);
+  }
+
+  40% {
+    opacity: 0.55;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-14px) scaleX(1.15);
+  }
+}
+
+.rc-fade-up {
+  opacity: 0;
+  animation: rc-fade-up 0.6s ease-out forwards;
+  animation-delay: var(--rc-delay, 0s);
+}
+
+.rc-float {
+  animation: rc-float 5s ease-in-out infinite;
+}
+
+.rc-steam {
+  opacity: 0;
+  animation: rc-steam 3.2s ease-in-out infinite;
+  animation-delay: var(--rc-delay, 0s);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rc-fade-up {
+    opacity: 1;
+    animation: none;
+  }
+
+  .rc-float,
+  .rc-steam {
+    animation: none;
+  }
+}
+
+.rc-reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+}
+
+.rc-reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rc-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

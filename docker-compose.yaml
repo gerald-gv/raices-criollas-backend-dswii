@@ -1,11 +1,11 @@
 x-tz-java: &tz-java
   TZ: America/Lima
   JAVA_TOOL_OPTIONS: -Duser.timezone=America/Lima
-
+ 
 x-tz-postgres: &tz-postgres
   TZ: America/Lima
   PGTZ: America/Lima
-
+ 
 services:
   postgres-auth:
     image: postgres:18
@@ -26,7 +26,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-
+ 
   postgres-menu:
     image: postgres:18
     container_name: raices-criollas-postgres-menu
@@ -46,7 +46,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-
+ 
   rabbitmq:
     image: rabbitmq:4-management
     container_name: raices-criollas-rabbitmq
@@ -66,7 +66,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-
+ 
   menu:
     build:
       context: ./raices-criollas-menu
@@ -95,7 +95,7 @@ services:
         condition: service_healthy
       eureka:
         condition: service_started
-
+ 
   eureka:
     build:
       context: ./raices-criollas-eureka
@@ -106,7 +106,7 @@ services:
       <<: *tz-java
     ports:
       - "8761:8761"
-
+ 
   auth:
     build:
       context: ./raices-criollas-auth
@@ -127,7 +127,7 @@ services:
         condition: service_healthy
       eureka:
         condition: service_started
-
+ 
   gateway:
     build:
       context: ./raices-criollas-gateway
@@ -143,7 +143,7 @@ services:
     depends_on:
       - eureka
       - auth
-
+ 
   postgres-pedidos:
     image: postgres:18
     container_name: raices-criollas-postgres-pedidos
@@ -160,7 +160,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-
+ 
   pedidos:
     build:
       context: ./raices-criollas-pedidos
@@ -187,7 +187,7 @@ services:
         condition: service_healthy
       eureka:
         condition: service_started
-
+ 
   postgres-reservas:
     image: postgres:18
     container_name: raices-criollas-postgres-reservas
@@ -205,7 +205,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-
+ 
   reservas:
     build:
       context: ./raices-criollas-reservas
@@ -226,7 +226,7 @@ services:
         condition: service_healthy
       eureka:
         condition: service_started
-
+ 
   postgres-payment:
     image: postgres:18
     container_name: raices-criollas-postgres-payment
@@ -243,7 +243,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-
+ 
   payment:
     build:
       context: ./raices-criollas-payment
@@ -266,7 +266,26 @@ services:
         condition: service_healthy
       eureka:
         condition: service_started
-
+ 
+  web:
+    build:
+      context: ./raices-criollas-web
+      dockerfile: Dockerfile
+      args:
+        CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+        CLOUDINARY_HOSTNAME: ${CLOUDINARY_HOSTNAME:-res.cloudinary.com}
+    container_name: raices-criollas-web
+    restart: unless-stopped
+    environment:
+      TZ: America/Lima
+      API_URL: http://gateway:8080
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_HOSTNAME: ${CLOUDINARY_HOSTNAME:-res.cloudinary.com}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - gateway
+ 
 volumes:
   auth_postgres_data:
   menu_postgres_data:
